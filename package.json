@@ -1,0 +1,15 @@
+{
+  "name": "sistema_torneos",
+  "version": "1.0.0",
+  "description": "Sistema de puntuación y gestión de torneos de gimnasia artística",
+  "main": "server/server.js",
+  "scripts": {
+    "install:all": "npm install && npm install --prefix server && npm install --prefix client --legacy-peer-deps",
+    "server": "node --watch server/server.js",
+    "client": "npm run dev --prefix client",
+    "dev": "concurrently \"npm run server\" \"npm run client\""
+  },
+  "dependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

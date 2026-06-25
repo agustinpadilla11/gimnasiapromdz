@@ -1,0 +1,15 @@
+{
+  "id": "regional-clubes-2026",
+  "nombre": "regional de clubes cuyo 2026",
+  "modalidad": "GAF",
+  "adminPin": "2302",
+  "juezPin": "2206",
+  "fechaCreacion": "2026-06-22T15:06:37.568Z",
+  "aparatos": [
+    "Salto",
+    "Paralelas",
+    "Viga",
+    "Suelo"
+  ],
+  "gimnastas": []
+}

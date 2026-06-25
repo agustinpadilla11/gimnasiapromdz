@@ -1,0 +1,963 @@
+{
+  "id": "corpo-pro",
+  "nombre": "torneo interino de corpo",
+  "modalidad": "GAF",
+  "adminPin": "1111",
+  "juezPin": "2222",
+  "fechaCreacion": "2026-06-22T15:31:56.172Z",
+  "aparatos": [
+    "Salto",
+    "Paralelas",
+    "Viga",
+    "Suelo"
+  ],
+  "gimnastas": [
+    {
+      "id": "g_1782142358233_1_pf6x1",
+      "nombre": "Fernandez Mosso, Mora",
+      "fechaNacimiento": "20-07-2013",
+      "nacimiento": "2013",
+      "institucion": "Akro's",
+      "categoria": "Infantil",
+      "nivel": "Nivel 1A",
+      "sexo": "",
+      "grupo": "Turno 1",
+      "notas": {
+        "Salto": {
+          "jueces": [
+            0.45,
+            0.55,
+            null
+          ],
+          "notaB": 9.5,
+          "dtos": 0,
+          "final": 9.5,
+          "baseScore": 10,
+          "fechaRegistro": "2026-06-22T15:36:33.151Z"
+        },
+        "Paralelas": {
+          "jueces": [
+            2.1,
+            2.3,
+            null
+          ],
+          "notaB": 7.8,
+          "dtos": 0,
+          "final": 7.8,
+          "baseScore": 10,
+          "fechaRegistro": "2026-06-22T15:38:33.336Z"
+        }
+      }
+    },
+    {
+      "id": "g_1782142358233_2_v4bg9",
+      "nombre": "Guignet Di Marco, Allegra",
+      "fechaNacimiento": "21-05-2014",
+      "nacimiento": "2014",
+      "institucion": "Akro's",
+      "categoria": "Infantil",
+      "nivel": "Nivel 1A",
+      "sexo": "",
+      "grupo": "Turno 1",
+      "notas": {}
+    },
+    {
+      "id": "g_1782142358233_3_x5zgd",
+      "nombre": "Martin Pietrasanta, Julia",
+      "fechaNacimiento": "01-04-2014",
+      "nacimiento": "2014",
+      "institucion": "Akro's",
+      "categoria": "Infantil",
+      "nivel": "Nivel 1A",
+      "sexo": "",
+      "grupo": "Turno 1",
+      "notas": {
+        "Salto": {
+          "jueces": [
+            1.5,
+            1.4,
+            null
+          ],
+          "notaB": 8.55,
+          "dtos": 0,
+          "final": 8.55,
+          "baseScore": 10,
+          "fechaRegistro": "2026-06-22T15:37:12.285Z"
+        },
+        "Paralelas": {
+          "jueces": [
+            2.6,
+            3,
+            null
+          ],
+          "notaB": 7.2,
+          "dtos": 0,
+          "final": 7.2,
+          "baseScore": 10,
+          "fechaRegistro": "2026-06-22T15:39:02.182Z"
+        }
+      }
+    },
+    {
+      "id": "g_1782142358233_4_g8don",
+      "nombre": "Vila Olguin, Martina",
+      "fechaNacimiento": "02-01-2013",
+      "nacimiento": "2013",
+      "institucion": "Akro's",
+      "categoria": "Infantil",
+      "nivel": "Nivel 1A",
+      "sexo": "",
+      "grupo": "Turno 1",
+      "notas": {}
+    },
+    {
+      "id": "g_1782142358233_5_m6mwe",
+      "nombre": "Arenas, Josefina",
+      "fechaNacimiento": "14-07-2014",
+      "nacimiento": "2014",
+      "institucion": "Akro's",
+      "categoria": "Infantil",
+      "nivel": "Nivel 1A",
+      "sexo": "",
+      "grupo": "Turno 1",
+      "notas": {}
+    },
+    {
+      "id": "g_1782142358233_6_9t1ld",
+      "nombre": "Moyano Vega, Amelia",
+      "fechaNacimiento": "26-12-2013",
+      "nacimiento": "2013",
+      "institucion": "Akro's",
+      "categoria": "Infantil",
+      "nivel": "Nivel 1A",
+      "sexo": "",
+      "grupo": "Turno 1",
+      "notas": {}
+    },
+    {
+      "id": "g_1782142358233_7_wzhe7",
+      "nombre": "Bernasconi Suarez, Lucia",
+      "fechaNacimiento": "28-06-2013",
+      "nacimiento": "2013",
+      "institucion": "Akro's",
+      "categoria": "Infantil",
+      "nivel": "Nivel 1A",
+      "sexo": "",
+      "grupo": "Turno 1",
+      "notas": {}
+    },
+    {
+      "id": "g_1782142358233_8_bt6ti",
+      "nombre": "Videla, Maria Isabella",
+      "fechaNacimiento": "06-07-2014",
+      "nacimiento": "2014",
+      "institucion": "Akro's",
+      "categoria": "Infantil",
+      "nivel": "Nivel 1A",
+      "sexo": "",
+      "grupo": "Turno 1",
+      "notas": {}
+    },
+    {
+      "id": "g_1782142358233_9_74or4",
+      "nombre": "Rebaque, Sofia",
+      "fechaNacimiento": "24-12-2014",
+      "nacimiento": "2014",
+      "institucion": "Akro's",
+      "categoria": "Infantil",
+      "nivel": "Nivel 1A",
+      "sexo": "",
+      "grupo": "Turno 1",
+      "notas": {}
+    },
+    {
+      "id": "g_1782142358233_10_arynj",
+      "nombre": "Di Pietro, Sofia Maria",
+      "fechaNacimiento": "20-08-2014",
+      "nacimiento": "2014",
+      "institucion": "Akro's",
+      "categoria": "Infantil",
+      "nivel": "Nivel 1A",
+      "sexo": "",
+      "grupo": "Turno 1",
+      "notas": {}
+    },
+    {
+      "id": "g_1782142358233_11_ip79m",
+      "nombre": "Montaña Quiroga, Ana Luz",
+      "fechaNacimiento": "22-09-2013",
+      "nacimiento": "2013",
+      "institucion": "Altis Espacio Deportivo",
+      "categoria": "Infantil",
+      "nivel": "Nivel 1A",
+      "sexo": "",
+      "grupo": "Turno 1",
+      "notas": {
+        "Salto": {
+          "jueces": [
+            1.7,
+            1.65,
+            null
+          ],
+          "notaB": 8.325,
+          "dtos": 0,
+          "final": 8.325,
+          "baseScore": 10,
+          "fechaRegistro": "2026-06-22T15:37:44.455Z"
+        },
+        "Paralelas": {
+          "jueces": [
+            1.7,
+            1.6,
+            null
+          ],
+          "notaB": 8.35,
+          "dtos": 0,
+          "final": 8.35,
+          "baseScore": 10,
+          "fechaRegistro": "2026-06-22T15:42:25.952Z"
+        }
+      }
+    },
+    {
+      "id": "g_1782142358233_12_umpzh",
+      "nombre": "Romero Braña, Indira",
+      "fechaNacimiento": "05-05-2014",
+      "nacimiento": "2014",
+      "institucion": "Altis Espacio Deportivo",
+      "categoria": "Infantil",
+      "nivel": "Nivel 1A",
+      "sexo": "",
+      "grupo": "Turno 1",
+      "notas": {}
+    },
+    {
+      "id": "g_1782142358234_13_4yteh",
+      "nombre": "Amaya, Lucia",
+      "fechaNacimiento": "12-03-2013",
+      "nacimiento": "2013",
+      "institucion": "Corpo Libero",
+      "categoria": "Infantil",
+      "nivel": "Nivel 1A",
+      "sexo": "",
+      "grupo": "Turno 1",
+      "notas": {
+        "Salto": {
+          "jueces": [
+            0.45,
+            0.55
+          ],
+          "notaB": 9.5,
+          "dtos": 0,
+          "final": 9.5,
+          "baseScore": 10,
+          "fechaRegistro": "2026-06-22T16:07:40.454Z"
+        }
+      }
+    },
+    {
+      "id": "g_1782142358234_14_yzqcd",
+      "nombre": "Zapata Perez, Maria Constanza",
+      "fechaNacimiento": "11-11-2013",
+      "nacimiento": "2013",
+      "institucion": "Jesica Buchert",
+      "categoria": "Infantil",
+      "nivel": "Nivel 1A",
+      "sexo": "",
+      "grupo": "Turno 1",
+      "notas": {
+        "Salto": {
+          "jueces": [
+            1,
+            0.9
+          ],
+          "notaB": 9.05,
+          "dtos": 0,
+          "final": 9.05,
+          "baseScore": 10,
+          "fechaRegistro": "2026-06-22T16:36:02.584Z"
+        }
+      }
+    },
+    {
+      "id": "g_1782142358234_15_0xyjt",
+      "nombre": "Alvarez, Paz",
+      "fechaNacimiento": "14-09-2013",
+      "nacimiento": "2013",
+      "institucion": "Jesica Buchert",
+      "categoria": "Infantil",
+      "nivel": "Nivel 1A",
+      "sexo": "",
+      "grupo": "Turno 1",
+      "notas": {}
+    },
+    {
+      "id": "g_1782142358234_16_kuk7e",
+      "nombre": "Cortez, Martina",
+      "fechaNacimiento": "30-10-2013",
+      "nacimiento": "2013",
+      "institucion": "Jesica Buchert",
+      "categoria": "Infantil",
+      "nivel": "Nivel 1A",
+      "sexo": "",
+      "grupo": "Turno 1",
+      "notas": {}
+    },
+    {
+      "id": "g_1782142358234_17_12jbn",
+      "nombre": "Jofre, Priscila",
+      "fechaNacimiento": "05-12-2013",
+      "nacimiento": "2013",
+      "institucion": "Jesica Buchert",
+      "categoria": "Infantil",
+      "nivel": "Nivel 1A",
+      "sexo": "",
+      "grupo": "Turno 1",
+      "notas": {}
+    },
+    {
+      "id": "g_1782142358234_18_oaj1z",
+      "nombre": "Otero Rubio, Bianca",
+      "fechaNacimiento": "03-01-2013",
+      "nacimiento": "2013",
+      "institucion": "Bordano",
+      "categoria": "Infantil",
+      "nivel": "Nivel 1A",
+      "sexo": "",
+      "grupo": "Turno 1",
+      "notas": {
+        "Salto": {
+          "jueces": [
+            2,
+            2.3
+          ],
+          "notaB": 7.85,
+          "dtos": 0,
+          "final": 7.85,
+          "baseScore": 10,
+          "fechaRegistro": "2026-06-22T16:36:38.989Z"
+        }
+      }
+    },
+    {
+      "id": "g_1782142358234_19_h3lue",
+      "nombre": "Disca, Maria Isabella",
+      "fechaNacimiento": "19-06-2013",
+      "nacimiento": "2013",
+      "institucion": "Bordano",
+      "categoria": "Infantil",
+      "nivel": "Nivel 1A",
+      "sexo": "",
+      "grupo": "Turno 1",
+      "notas": {}
+    },
+    {
+      "id": "g_1782142358234_20_565tp",
+      "nombre": "Alonso Artola, Antonio",
+      "fechaNacimiento": "15-02-2013",
+      "nacimiento": "2013",
+      "institucion": "Bordano",
+      "categoria": "Infantil",
+      "nivel": "Nivel 1A",
+      "sexo": "",
+      "grupo": "Turno 1",
+      "notas": {}
+    },
+    {
+      "id": "g_1782158551967_1_f4akw",
+      "nombre": "Galera, Amparo",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "AKRO'S",
+      "categoria": "Infantil",
+      "nivel": "Nivel 6",
+      "sexo": "",
+      "grupo": "turno 2",
+      "notas": {}
+    },
+    {
+      "id": "g_1782158551967_2_780vn",
+      "nombre": "OrduÑa Simon, Maria Francisca",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "AKRO'S",
+      "categoria": "Infantil",
+      "nivel": "Nivel 6",
+      "sexo": "",
+      "grupo": "turno 2",
+      "notas": {
+        "Salto": {
+          "jueces": [
+            0.55,
+            1,
+            1
+          ],
+          "notaB": 9.15,
+          "dtos": 0,
+          "final": 9.15,
+          "baseScore": 10,
+          "fechaRegistro": "2026-06-22T20:19:12.885Z"
+        }
+      }
+    },
+    {
+      "id": "g_1782158551967_3_2qg3d",
+      "nombre": "Lucesole Roldan, Brunella",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "AKRO'S",
+      "categoria": "Infantil",
+      "nivel": "Nivel 6",
+      "sexo": "",
+      "grupo": "turno 2",
+      "notas": {}
+    },
+    {
+      "id": "g_1782158551967_4_jfk53",
+      "nombre": "Fischer Gonzalez, Valentina Federica",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "AKRO'S",
+      "categoria": "Infantil",
+      "nivel": "Nivel 6",
+      "sexo": "",
+      "grupo": "turno 2",
+      "notas": {}
+    },
+    {
+      "id": "g_1782158551967_5_trmzp",
+      "nombre": "Vila, Alma Celina",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "AKRO'S",
+      "categoria": "Infantil",
+      "nivel": "Nivel 6",
+      "sexo": "",
+      "grupo": "turno 2",
+      "notas": {}
+    },
+    {
+      "id": "g_1782158551967_6_vwfqn",
+      "nombre": "Jofre Matos, Antonella Milena",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "CORPO LIBERO",
+      "categoria": "Infantil",
+      "nivel": "Nivel 6",
+      "sexo": "",
+      "grupo": "turno 2",
+      "notas": {}
+    },
+    {
+      "id": "g_1782158551967_7_k7xue",
+      "nombre": "Sanchez Espinòs, Federica",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "CORPO LIBERO",
+      "categoria": "Infantil",
+      "nivel": "Nivel 6",
+      "sexo": "",
+      "grupo": "turno 2",
+      "notas": {}
+    },
+    {
+      "id": "g_1782158551967_8_emh7z",
+      "nombre": "Perez Lama, Pilar",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "CORPO LIBERO",
+      "categoria": "Infantil",
+      "nivel": "Nivel 6",
+      "sexo": "",
+      "grupo": "turno 2",
+      "notas": {}
+    },
+    {
+      "id": "g_1782158551967_9_x7hih",
+      "nombre": "Tarquini, Sofia Maria",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "CORPO LIBERO",
+      "categoria": "Infantil",
+      "nivel": "Nivel 6",
+      "sexo": "",
+      "grupo": "turno 2",
+      "notas": {}
+    },
+    {
+      "id": "g_1782158551967_10_0c8n7",
+      "nombre": "Naranjo Ruiz, Rebeca",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "CORPO LIBERO",
+      "categoria": "Infantil",
+      "nivel": "Nivel 6",
+      "sexo": "",
+      "grupo": "turno 2",
+      "notas": {}
+    },
+    {
+      "id": "g_1782158551967_11_zhtsg",
+      "nombre": "Tarquini, Maria Ignacia",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "CORPO LIBERO",
+      "categoria": "Infantil",
+      "nivel": "Nivel 6",
+      "sexo": "",
+      "grupo": "turno 2",
+      "notas": {}
+    },
+    {
+      "id": "g_1782158551967_12_9vv7q",
+      "nombre": "Flores Vargas, Azul Magdalena",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "M.MENDOZA",
+      "categoria": "Infantil",
+      "nivel": "Nivel 6",
+      "sexo": "",
+      "grupo": "turno 2",
+      "notas": {}
+    },
+    {
+      "id": "g_1782158551967_13_lzl44",
+      "nombre": "Suzzara Corrales, Maria Victoria",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "M.MENDOZA",
+      "categoria": "Infantil",
+      "nivel": "Nivel 6",
+      "sexo": "",
+      "grupo": "turno 2",
+      "notas": {}
+    },
+    {
+      "id": "g_1782158551968_14_kyont",
+      "nombre": "Cid, Milagros Abril",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "AKRO'S",
+      "categoria": "Juvenil",
+      "nivel": "Nivel 6",
+      "sexo": "",
+      "grupo": "turno 2",
+      "notas": {
+        "Salto": {
+          "jueces": [
+            1,
+            1.4,
+            1.1
+          ],
+          "notaB": 8.833,
+          "dtos": 0,
+          "final": 8.833,
+          "baseScore": 10,
+          "fechaRegistro": "2026-06-22T20:16:10.823Z"
+        }
+      }
+    },
+    {
+      "id": "g_1782158551968_15_2zob7",
+      "nombre": "Quinteros Arena, Renata",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "AKRO'S",
+      "categoria": "Juvenil",
+      "nivel": "Nivel 6",
+      "sexo": "",
+      "grupo": "turno 2",
+      "notas": {}
+    },
+    {
+      "id": "g_1782158551968_16_3s54x",
+      "nombre": "Chales Tordi, Maria Clara",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "AKRO'S",
+      "categoria": "Juvenil",
+      "nivel": "Nivel 6",
+      "sexo": "",
+      "grupo": "turno 2",
+      "notas": {}
+    },
+    {
+      "id": "g_1782158551968_17_sk86x",
+      "nombre": "Motisi Garro, Angie Paulina",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "AKRO'S",
+      "categoria": "Juvenil",
+      "nivel": "Nivel 6",
+      "sexo": "",
+      "grupo": "turno 2",
+      "notas": {}
+    },
+    {
+      "id": "g_1782158551968_18_adnsi",
+      "nombre": "Arrieta, Juliana",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "AKRO'S",
+      "categoria": "Juvenil",
+      "nivel": "Nivel 7",
+      "sexo": "",
+      "grupo": "turno 2",
+      "notas": {}
+    },
+    {
+      "id": "g_1782158551968_19_pqrkp",
+      "nombre": "Perez Lama, Julia Milagros",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "CORPO LIBERO",
+      "categoria": "Juvenil",
+      "nivel": "Nivel 7",
+      "sexo": "",
+      "grupo": "turno 2",
+      "notas": {}
+    },
+    {
+      "id": "g_1782158551968_20_h0p9w",
+      "nombre": "Sancassani, Micaela",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "M.MENDOZA",
+      "categoria": "Juvenil",
+      "nivel": "Nivel 6",
+      "sexo": "",
+      "grupo": "turno 2",
+      "notas": {
+        "Salto": {
+          "jueces": [
+            0.55,
+            0.5,
+            0.45
+          ],
+          "notaB": 9.5,
+          "dtos": 0,
+          "final": 9.5,
+          "baseScore": 10,
+          "fechaRegistro": "2026-06-22T20:17:24.660Z"
+        }
+      }
+    },
+    {
+      "id": "g_1782158551968_21_ems4c",
+      "nombre": "Herrera Benedetti, Victoria",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "AKRO'S",
+      "categoria": "Mayor",
+      "nivel": "Nivel 6",
+      "sexo": "",
+      "grupo": "turno 2",
+      "notas": {}
+    },
+    {
+      "id": "g_1782158551968_22_qnz0y",
+      "nombre": "Torrent Yanzon, Maria",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "AKRO'S",
+      "categoria": "Mayor",
+      "nivel": "Nivel 6",
+      "sexo": "",
+      "grupo": "turno 2",
+      "notas": {}
+    },
+    {
+      "id": "g_1782158551968_23_p36h3",
+      "nombre": "Brallard, Rosario Lucia",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "AKRO'S",
+      "categoria": "Mayor",
+      "nivel": "Nivel 6",
+      "sexo": "",
+      "grupo": "turno 2",
+      "notas": {}
+    },
+    {
+      "id": "g_1782158551968_24_pdehh",
+      "nombre": "Linardelli, Maria Grazia",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "AKRO'S",
+      "categoria": "Mayor",
+      "nivel": "Nivel 6",
+      "sexo": "",
+      "grupo": "turno 2",
+      "notas": {}
+    },
+    {
+      "id": "g_1782158551968_25_prxpx",
+      "nombre": "Pecchini, Juana",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "AKRO'S",
+      "categoria": "Mayor",
+      "nivel": "Nivel 6",
+      "sexo": "",
+      "grupo": "turno 2",
+      "notas": {}
+    },
+    {
+      "id": "g_1782158551968_26_8zeby",
+      "nombre": "Segui, Martina",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "AKRO'S",
+      "categoria": "Mayor",
+      "nivel": "Nivel 6",
+      "sexo": "",
+      "grupo": "turno 2",
+      "notas": {}
+    },
+    {
+      "id": "g_1782158551968_27_03kv4",
+      "nombre": "Spektor Cortez, Magdalena",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "AKRO'S",
+      "categoria": "Mayor",
+      "nivel": "Nivel 7",
+      "sexo": "",
+      "grupo": "turno 2",
+      "notas": {}
+    },
+    {
+      "id": "g_1782158551968_28_u0b6w",
+      "nombre": "D'andrea, Camila",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "AKRO'S",
+      "categoria": "Mayor",
+      "nivel": "Nivel 7",
+      "sexo": "",
+      "grupo": "turno 2",
+      "notas": {}
+    },
+    {
+      "id": "g_1782158551968_29_ia29d",
+      "nombre": "Fermani, Emilia",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "CORPO LIBERO",
+      "categoria": "Mayor",
+      "nivel": "Nivel 6",
+      "sexo": "",
+      "grupo": "turno 2",
+      "notas": {}
+    },
+    {
+      "id": "g_1782158551968_30_p2s0z",
+      "nombre": "Crenna Aguilera, Tiana Luz",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "CORPO LIBERO",
+      "categoria": "Mayor",
+      "nivel": "Nivel 6",
+      "sexo": "",
+      "grupo": "turno 2",
+      "notas": {}
+    },
+    {
+      "id": "g_1782158551968_31_a98k7",
+      "nombre": "Cahiza Pelaia, Jazmin",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "CORPO LIBERO",
+      "categoria": "Mayor",
+      "nivel": "Nivel 6",
+      "sexo": "",
+      "grupo": "turno 2",
+      "notas": {}
+    },
+    {
+      "id": "g_1782158551968_32_7nc48",
+      "nombre": "Medina Valdivieso, Juliana Ayelen",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "CORPO LIBERO",
+      "categoria": "Mayor",
+      "nivel": "Nivel 6",
+      "sexo": "",
+      "grupo": "turno 2",
+      "notas": {}
+    },
+    {
+      "id": "g_1782158551968_33_63d8x",
+      "nombre": "Vega, Aylen",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "M.MENDOZA",
+      "categoria": "Mayor",
+      "nivel": "Nivel 6",
+      "sexo": "",
+      "grupo": "turno 2",
+      "notas": {}
+    },
+    {
+      "id": "g_1782158551968_34_p0fai",
+      "nombre": "Scafi Bianchi, Ambra",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "CORPO LIBERO",
+      "categoria": "Mini",
+      "nivel": "Nivel 6",
+      "sexo": "",
+      "grupo": "turno 2",
+      "notas": {}
+    },
+    {
+      "id": "g_1782158551968_35_ui82r",
+      "nombre": "Sotto Ayala, Delfina Luz",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "CORPO LIBERO",
+      "categoria": "Mini",
+      "nivel": "Nivel 6",
+      "sexo": "",
+      "grupo": "turno 2",
+      "notas": {}
+    },
+    {
+      "id": "g_1782158551968_36_jfhc8",
+      "nombre": "Moreno Fragapane, Giana",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "CORPO LIBERO",
+      "categoria": "Mini",
+      "nivel": "Nivel 6",
+      "sexo": "",
+      "grupo": "turno 2",
+      "notas": {}
+    },
+    {
+      "id": "g_1782158551968_37_axuep",
+      "nombre": "Ceppi Tombesi, Valentina Jazmin",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "AKRO'S",
+      "categoria": "Pre Infantil",
+      "nivel": "Nivel 6",
+      "sexo": "",
+      "grupo": "turno 2",
+      "notas": {}
+    },
+    {
+      "id": "g_1782158551968_38_jk3j2",
+      "nombre": "Arrieta, Martina",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "AKRO'S",
+      "categoria": "Pre Infantil",
+      "nivel": "Nivel 6",
+      "sexo": "",
+      "grupo": "turno 2",
+      "notas": {}
+    },
+    {
+      "id": "g_1782158551968_39_3asut",
+      "nombre": "Fischer Gonzalez, Viktoria Guillermina",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "AKRO'S",
+      "categoria": "Pre Infantil",
+      "nivel": "Nivel 6",
+      "sexo": "",
+      "grupo": "turno 2",
+      "notas": {}
+    },
+    {
+      "id": "g_1782158551968_40_3f3sn",
+      "nombre": "Bennardi Piatelli, Alessia Vita",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "CORPO LIBERO",
+      "categoria": "Pre Infantil",
+      "nivel": "Nivel 6",
+      "sexo": "",
+      "grupo": "turno 2",
+      "notas": {}
+    },
+    {
+      "id": "g_1782158551968_41_jaqk0",
+      "nombre": "Yañez De Conick, Luciana",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "CORPO LIBERO",
+      "categoria": "Pre Infantil",
+      "nivel": "Nivel 6",
+      "sexo": "",
+      "grupo": "turno 2",
+      "notas": {}
+    },
+    {
+      "id": "g_1782158551968_42_fv1ih",
+      "nombre": "Bavetta Alvarez, Francesca",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "CORPO LIBERO",
+      "categoria": "Pre Infantil",
+      "nivel": "Nivel 6",
+      "sexo": "",
+      "grupo": "turno 2",
+      "notas": {}
+    },
+    {
+      "id": "g_1782158551968_43_4fem6",
+      "nombre": "Lopez Gomez, Evangelina",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "CORPO LIBERO",
+      "categoria": "Pre Infantil",
+      "nivel": "Nivel 6",
+      "sexo": "",
+      "grupo": "turno 2",
+      "notas": {}
+    },
+    {
+      "id": "g_1782158551968_44_umq7t",
+      "nombre": "Alcalde Mingrino, Olivia",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "CORPO LIBERO",
+      "categoria": "Pre Infantil",
+      "nivel": "Nivel 6",
+      "sexo": "",
+      "grupo": "turno 2",
+      "notas": {}
+    },
+    {
+      "id": "g_1782158551968_45_wvju9",
+      "nombre": "Fernandez Berrios, Nazarena Waleska",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "M.MENDOZA",
+      "categoria": "Pre Infantil",
+      "nivel": "Nivel 6",
+      "sexo": "",
+      "grupo": "turno 2",
+      "notas": {}
+    },
+    {
+      "id": "g_1782158551968_46_q1x6a",
+      "nombre": "Bertoli, Dulce",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "M.MENDOZA",
+      "categoria": "Pre Infantil",
+      "nivel": "Nivel 6",
+      "sexo": "",
+      "grupo": "turno 2",
+      "notas": {}
+    }
+  ],
+  "descuentosEquipos": {
+    "Nivel 1A - Infantil": {
+      "Akro's": 1
+    }
+  }
+}

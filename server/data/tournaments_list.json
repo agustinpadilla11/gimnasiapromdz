@@ -1,0 +1,26 @@
+[
+  {
+    "id": "regional-clubes-2026",
+    "nombre": "regional de clubes cuyo 2026",
+    "modalidad": "GAF",
+    "adminPin": "2302",
+    "juezPin": "2206",
+    "fechaCreacion": "2026-06-22T15:06:37.568Z"
+  },
+  {
+    "id": "corpo-pro",
+    "nombre": "torneo interino de corpo",
+    "modalidad": "GAF",
+    "adminPin": "1111",
+    "juezPin": "2222",
+    "fechaCreacion": "2026-06-22T15:31:56.172Z"
+  },
+  {
+    "id": "torneo-masculino-gimnos",
+    "nombre": "torneo de invierno gymnos",
+    "modalidad": "GAM",
+    "adminPin": "1234",
+    "juezPin": "3333",
+    "fechaCreacion": "2026-06-25T21:04:12.341Z"
+  }
+]

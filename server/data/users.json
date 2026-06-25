@@ -1,0 +1,26 @@
+[
+  {
+    "username": "presidente",
+    "password": "mendoza2026pres",
+    "role": "Presidente",
+    "name": "Presidente Federación"
+  },
+  {
+    "username": "secretario",
+    "password": "mendoza2026sec",
+    "role": "Secretario",
+    "name": "Secretario Federación"
+  },
+  {
+    "username": "delegado1",
+    "password": "mendoza2026del",
+    "role": "Delegado",
+    "name": "Delegado Zona Sur"
+  },
+  {
+    "username": "delegado2",
+    "password": "mendoza2026del",
+    "role": "Delegado",
+    "name": "Delegado Zona Norte"
+  }
+]

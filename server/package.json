@@ -1,0 +1,15 @@
+{
+  "name": "sistema_torneos_server",
+  "version": "1.0.0",
+  "description": "Servidor backend de puntuación y gestión de torneos de gimnasia",
+  "main": "server.js",
+  "type": "module",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "multer": "^1.4.5-lts.1",
+    "sistema_torneos": "file:..",
+    "ws": "^8.17.0",
+    "xlsx": "^0.18.5"
+  }
+}

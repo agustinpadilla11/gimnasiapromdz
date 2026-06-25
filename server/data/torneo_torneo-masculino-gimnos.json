@@ -1,0 +1,158 @@
+{
+  "id": "torneo-masculino-gimnos",
+  "nombre": "torneo de invierno gymnos",
+  "modalidad": "GAM",
+  "adminPin": "1234",
+  "juezPin": "3333",
+  "fechaCreacion": "2026-06-25T21:04:12.341Z",
+  "aparatos": [
+    "Suelo",
+    "Arzones",
+    "Anillas",
+    "Salto",
+    "Paralelas",
+    "Barra Fija"
+  ],
+  "gimnastas": [
+    {
+      "id": "g_1782422469694_1_qb7bo",
+      "nombre": "Rojas, Lautaro",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "M.MENDOZA",
+      "categoria": "Junior",
+      "nivel": "AC",
+      "sexo": "",
+      "grupo": "turno 1",
+      "notas": {
+        "Suelo": {
+          "jueces": [
+            8,
+            8,
+            null,
+            null,
+            null,
+            null
+          ],
+          "notaB": 8,
+          "dtos": 0,
+          "final": 8,
+          "baseScore": 9.5,
+          "fechaRegistro": "2026-06-25T21:50:33.955Z"
+        }
+      }
+    },
+    {
+      "id": "g_1782422469694_2_zha31",
+      "nombre": "Abdo Alvarez, Anuar",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "M.MENDOZA",
+      "categoria": "Juvenil",
+      "nivel": "AC",
+      "sexo": "",
+      "grupo": "turno 1",
+      "notas": {
+        "Suelo": {
+          "jueces": [
+            790,
+            8,
+            null,
+            null,
+            null,
+            null
+          ],
+          "notaB": 399,
+          "dtos": 0,
+          "final": 399,
+          "baseScore": 9.5,
+          "fechaRegistro": "2026-06-25T21:44:46.924Z"
+        }
+      }
+    },
+    {
+      "id": "g_1782422469694_3_rwnqn",
+      "nombre": "Alam, Mateo",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "M.MENDOZA",
+      "categoria": "Juvenil",
+      "nivel": "AC",
+      "sexo": "",
+      "grupo": "turno 1",
+      "notas": {
+        "Suelo": {
+          "jueces": [
+            8,
+            8.1
+          ],
+          "notaB": 8.05,
+          "dtos": 0,
+          "final": 8.05,
+          "baseScore": 9.5,
+          "fechaRegistro": "2026-06-25T21:51:00.180Z"
+        }
+      }
+    },
+    {
+      "id": "g_1782422469694_4_byb6h",
+      "nombre": "Calcagno, Gino Adriano",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "M.MENDOZA",
+      "categoria": "Juvenil",
+      "nivel": "AC",
+      "sexo": "",
+      "grupo": "turno 1",
+      "notas": {}
+    },
+    {
+      "id": "g_1782422469694_5_pyhu7",
+      "nombre": "Sanchez Alvarez, Agustin",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "M.MENDOZA",
+      "categoria": "Juvenil",
+      "nivel": "AC",
+      "sexo": "",
+      "grupo": "turno 1",
+      "notas": {
+        "Suelo": {
+          "jueces": [
+            5.5,
+            5
+          ],
+          "notaB": 5.25,
+          "dtos": 0,
+          "final": 5.25,
+          "baseScore": 9.5,
+          "fechaRegistro": "2026-06-25T21:45:51.528Z"
+        }
+      }
+    },
+    {
+      "id": "g_1782422469694_6_ffsni",
+      "nombre": "Arias, Simon",
+      "fechaNacimiento": "",
+      "nacimiento": "",
+      "institucion": "M.MENDOZA",
+      "categoria": "Juvenil",
+      "nivel": "AC",
+      "sexo": "",
+      "grupo": "turno 1",
+      "notas": {
+        "Suelo": {
+          "jueces": [
+            9,
+            9.2
+          ],
+          "notaB": 9.1,
+          "dtos": 0,
+          "final": 9.1,
+          "baseScore": 9.5,
+          "fechaRegistro": "2026-06-25T21:51:27.974Z"
+        }
+      }
+    }
+  ]
+}
