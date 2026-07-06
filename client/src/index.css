@@ -1,33 +1,74 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
 :root {
-  --bg-primary: #080c16;
-  --bg-secondary: #0f172a;
-  --bg-card: rgba(20, 30, 54, 0.6);
-  --bg-card-hover: rgba(28, 41, 74, 0.8);
-  --border-color: rgba(255, 255, 255, 0.08);
-  --border-color-hover: rgba(255, 255, 255, 0.15);
+  --bg-primary: #05070c;
+  --bg-secondary: #0c0f1d;
+  --bg-card: rgba(12, 20, 38, 0.6);
+  --bg-card-hover: rgba(20, 32, 60, 0.8);
+  --border-color: rgba(56, 189, 248, 0.15);
+  --border-color-hover: rgba(56, 189, 248, 0.3);
   
-  --text-primary: #f8fafc;
+  --text-primary: #ffffff;
   --text-secondary: #94a3b8;
   --text-muted: #64748b;
   
-  --accent-primary: #3b82f6; /* Azul eléctrico */
-  --accent-primary-hover: #60a5fa;
-  --accent-gold: #0ea5e9; /* Celeste */
+  --accent-primary: #38bdf8; /* Azul claro / Celeste */
+  --accent-primary-hover: #7dd3fc;
+  --accent-gold: #0ea5e9;
   --accent-gold-hover: #38bdf8;
-  --accent-success: #10b981; /* Verde éxito */
-  --accent-danger: #ef4444; /* Rojo deducciones */
-  --accent-purple: #8b5cf6; /* Púrpura */
+  --accent-success: #10b981;
+  --accent-danger: #ef4444;
+  --accent-purple: #a855f7;
 
   --font-sans: 'Outfit', sans-serif;
   --font-mono: 'Space Grotesk', monospace;
   
-  --shadow-sm: 0 2px 8px -2px rgba(0, 0, 0, 0.5);
-  --shadow-md: 0 10px 25px -5px rgba(0, 0, 0, 0.6);
-  --shadow-lg: 0 20px 40px -10px rgba(0, 0, 0, 0.8);
-  --shadow-glow: 0 0 20px rgba(59, 130, 246, 0.25);
+  --shadow-sm: 0 2px 8px -2px rgba(0, 0, 0, 0.8);
+  --shadow-md: 0 10px 25px -5px rgba(0, 0, 0, 0.9);
+  --shadow-lg: 0 20px 40px -10px rgba(0, 0, 0, 0.95);
+  --shadow-glow: 0 0 20px rgba(56, 189, 248, 0.25);
   --shadow-gold-glow: 0 0 25px rgba(14, 165, 233, 0.35);
+
+  --bg-input: rgba(12, 17, 34, 0.8);
+  --bg-input-focus: rgba(18, 26, 50, 0.9);
+  --bg-th: #0c0f1d;
+  --bg-tr-hover: rgba(56, 189, 248, 0.03);
+  --bg-btn-secondary: rgba(255, 255, 255, 0.05);
+  --bg-btn-secondary-hover: rgba(255, 255, 255, 0.1);
+}
+
+body.light-theme {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f0f7ff;
+  --bg-card: rgba(255, 255, 255, 0.85);
+  --bg-card-hover: rgba(255, 255, 255, 0.95);
+  --border-color: rgba(2, 132, 199, 0.15);
+  --border-color-hover: rgba(2, 132, 199, 0.3);
+  
+  --text-primary: #000000;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  
+  --accent-primary: #0ea5e9; /* Azul claro / Celeste */
+  --accent-primary-hover: #0284c7;
+  --accent-gold: #0284c7;
+  --accent-gold-hover: #0369a1;
+  --accent-success: #059669;
+  --accent-danger: #dc2626;
+  --accent-purple: #7c3aed;
+
+  --shadow-sm: 0 2px 8px -2px rgba(2, 132, 199, 0.1);
+  --shadow-md: 0 10px 25px -5px rgba(2, 132, 199, 0.15);
+  --shadow-lg: 0 20px 40px -10px rgba(2, 132, 199, 0.2);
+  --shadow-glow: 0 0 20px rgba(14, 165, 233, 0.2);
+  --shadow-gold-glow: 0 0 25px rgba(2, 132, 199, 0.3);
+
+  --bg-input: #ffffff;
+  --bg-input-focus: #ffffff;
+  --bg-th: #f1f5f9;
+  --bg-tr-hover: rgba(14, 165, 233, 0.05);
+  --bg-btn-secondary: rgba(0, 0, 0, 0.05);
+  --bg-btn-secondary-hover: rgba(0, 0, 0, 0.1);
 }
 
 /* Reset general */
@@ -92,14 +133,14 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--accent-primary), #1d4ed8);
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-gold));
   color: #ffffff;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 4px 12px var(--border-color);
 }
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+  box-shadow: var(--shadow-glow);
 }
 
 .btn-primary:active {
@@ -107,25 +148,25 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .btn-secondary {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--bg-btn-secondary);
   color: var(--text-primary);
   border-color: var(--border-color);
 }
 
 .btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--bg-btn-secondary-hover);
   border-color: var(--border-color-hover);
 }
 
 .btn-gold {
-  background: linear-gradient(135deg, var(--accent-gold), #0284c7);
+  background: linear-gradient(135deg, var(--accent-gold), var(--accent-primary));
   color: #ffffff;
-  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+  box-shadow: 0 4px 12px var(--border-color);
 }
 
 .btn-gold:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(14, 165, 233, 0.45);
+  box-shadow: var(--shadow-glow);
 }
 
 .btn-danger {
@@ -157,7 +198,7 @@ h1, h2, h3, h4, h5, h6 {
 .input-field {
   width: 100%;
   padding: 12px 16px;
-  background: rgba(15, 23, 42, 0.6);
+  background: var(--bg-input);
   border: 1px solid var(--border-color);
   border-radius: 10px;
   color: var(--text-primary);
@@ -170,7 +211,7 @@ h1, h2, h3, h4, h5, h6 {
 .input-field:focus {
   border-color: var(--accent-primary);
   box-shadow: var(--shadow-glow);
-  background: rgba(15, 23, 42, 0.8);
+  background: var(--bg-input-focus);
 }
 
 /* Tablas Interactivas */
@@ -187,7 +228,7 @@ table {
 }
 
 th {
-  background: rgba(15, 23, 42, 0.8);
+  background: var(--bg-th);
   padding: 14px 16px;
   font-family: var(--font-sans);
   font-size: 0.85rem;
@@ -211,7 +252,7 @@ tr:last-child td {
 }
 
 tr:hover td {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--bg-tr-hover);
 }
 
 /* Controles de Vista / Navegación */
@@ -350,4 +391,43 @@ tr:hover td {
   .dashboard-layout {
     grid-template-columns: 1fr;
   }
+}
+
+/* Botón flotante para alternar tema claro/oscuro */
+.theme-toggle-btn {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--bg-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 9999;
+}
+
+.theme-toggle-btn:hover {
+  transform: scale(1.1) rotate(15deg);
+  background: var(--bg-card-hover);
+  border-color: var(--accent-primary);
+  box-shadow: var(--shadow-glow);
+}
+
+.theme-toggle-btn:active {
+  transform: scale(0.95);
+}
+
+.theme-toggle-btn svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
 }

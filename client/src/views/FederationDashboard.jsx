@@ -139,7 +139,7 @@ export default function FederationDashboard({ apiBase, auth, onLoginSuccess, onL
         alignItems: 'center',
         padding: '20px 30px',
         marginBottom: '30px',
-        background: 'rgba(15, 23, 42, 0.85)'
+        background: 'var(--bg-card)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
           <img src="/logo.png" alt="Federación Logo" style={{ height: '50px', objectFit: 'contain' }} />
@@ -222,8 +222,8 @@ export default function FederationDashboard({ apiBase, auth, onLoginSuccess, onL
 
       {/* FORMULARIO CREAR TORNEO (COLAPSABLE) */}
       {showCreateForm && (
-        <div className="glass-panel animate-fade-in" style={{ padding: '30px', marginBottom: '30px', background: 'rgba(15, 23, 42, 0.6)' }}>
-          <h2 style={{ fontSize: '1.2rem', marginBottom: '20px', color: '#fff' }}>Crear Nuevo Torneo</h2>
+        <div className="glass-panel animate-fade-in" style={{ padding: '30px', marginBottom: '30px', background: 'var(--bg-card)' }}>
+          <h2 style={{ fontSize: '1.2rem', marginBottom: '20px', color: 'var(--text-primary)' }}>Crear Nuevo Torneo</h2>
           <form onSubmit={handleCreateTournament} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label>ID del Torneo (Corto, sin espacios)</label>

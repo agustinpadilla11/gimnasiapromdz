@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Users, Trophy, Calendar, Upload, Download, Edit, Trash2, Plus, 
   Search, Check, ShieldAlert, Award, Grid, RefreshCw, Layers, MapPin, 
-  Save, X, FileText, CheckSquare, PlusCircle, Tv
+  Save, X, FileText, CheckSquare, PlusCircle, Tv, LogOut
 } from 'lucide-react';
 
 export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChangeView }) {
@@ -690,7 +690,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
         alignItems: 'center',
         padding: '20px 30px',
         marginBottom: '24px',
-        background: 'rgba(15, 23, 42, 0.85)'
+        background: 'var(--bg-card)'
       }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
@@ -710,7 +710,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
               Modalidad: {tournament.modalidad}
             </span>
           </div>
-          <h1 style={{ fontSize: '1.6rem', letterSpacing: '-0.02em' }}>{tournament.nombre}</h1>
+          <h1 style={{ fontSize: '1.6rem', letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>{tournament.nombre}</h1>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
@@ -729,7 +729,8 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
             Exportar Resultados
           </button>
 
-          <button onClick={onLogout} className="btn btn-secondary" style={{ padding: '10px 16px' }}>
+          <button onClick={onLogout} className="btn btn-secondary" style={{ gap: '8px' }}>
+            <LogOut size={18} />
             Cerrar Sesión
           </button>
         </div>
@@ -785,15 +786,15 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
         display: 'flex', 
         justifyContent: 'space-between',
         alignItems: 'center',
-        background: 'rgba(20, 30, 54, 0.3)',
+        background: 'var(--bg-card)',
         fontSize: '0.9rem'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <MapPin size={16} color="var(--accent-primary)" />
           <span style={{ color: 'var(--text-secondary)' }}>Instrucciones de Red:</span>
-          <strong>Conecta tablets de jueces al Wi-Fi y abre la IP de esta PC en el navegador.</strong>
+          <strong style={{ color: 'var(--text-primary)' }}>Conecta tablets de jueces al Wi-Fi y abre la IP de esta PC en el navegador.</strong>
         </div>
-        <div style={{ display: 'flex', gap: '15px' }}>
+        <div style={{ display: 'flex', gap: '15px', color: 'var(--text-primary)' }}>
           <div>PIN Jueces: <strong style={{ color: 'var(--accent-primary)', fontFamily: 'var(--font-mono)' }}>{tournament.juezPin || '5555'}</strong></div>
           <div>Gimnastas: <strong>{gymnasts.length}</strong></div>
         </div>
@@ -828,8 +829,8 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
       <div className="glass-panel" style={{
         padding: '16px 20px',
         marginBottom: '24px',
-        background: 'rgba(15, 23, 42, 0.4)',
-        borderColor: 'rgba(59, 130, 246, 0.15)'
+        background: 'var(--bg-card)',
+        borderColor: 'var(--border-color)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
           <Calendar size={18} color="var(--accent-primary)" />
@@ -856,21 +857,21 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
               padding: '12px 16px',
               borderRadius: '10px',
               cursor: 'pointer',
-              background: selectedTurno === 'Todos' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(255, 255, 255, 0.02)',
+              background: selectedTurno === 'Todos' ? 'var(--bg-tr-hover)' : 'var(--bg-btn-secondary)',
               border: `2px solid ${selectedTurno === 'Todos' ? 'var(--accent-primary)' : 'var(--border-color)'}`,
               transition: 'all 0.2s ease',
-              boxShadow: selectedTurno === 'Todos' ? '0 0 15px rgba(59, 130, 246, 0.2)' : 'none'
+              boxShadow: selectedTurno === 'Todos' ? 'var(--shadow-glow)' : 'none'
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-              <span style={{ fontWeight: '700', fontSize: '0.95rem', color: selectedTurno === 'Todos' ? '#fff' : 'var(--text-secondary)' }}>
+              <span style={{ fontWeight: '700', fontSize: '0.95rem', color: selectedTurno === 'Todos' ? 'var(--accent-primary)' : 'var(--text-secondary)' }}>
                 Todos los Turnos
               </span>
               <span style={{
                 fontSize: '0.75rem',
                 padding: '2px 6px',
                 borderRadius: '4px',
-                background: 'rgba(255,255,255,0.05)',
+                background: 'var(--bg-btn-secondary)',
                 color: 'var(--text-muted)'
               }}>
                 {gymnasts.length} gimn.
@@ -894,21 +895,21 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                   padding: '12px 16px',
                   borderRadius: '10px',
                   cursor: 'pointer',
-                  background: isSelected ? 'rgba(59, 130, 246, 0.15)' : 'rgba(255, 255, 255, 0.02)',
+                  background: isSelected ? 'var(--bg-tr-hover)' : 'var(--bg-btn-secondary)',
                   border: `2px solid ${isSelected ? 'var(--accent-primary)' : 'var(--border-color)'}`,
                   transition: 'all 0.2s ease',
-                  boxShadow: isSelected ? '0 0 15px rgba(59, 130, 246, 0.2)' : 'none'
+                  boxShadow: isSelected ? 'var(--shadow-glow)' : 'none'
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <span style={{ fontWeight: '700', fontSize: '0.95rem', color: isSelected ? '#fff' : 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={t}>
+                  <span style={{ fontWeight: '700', fontSize: '0.95rem', color: isSelected ? 'var(--accent-primary)' : 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={t}>
                     {t}
                   </span>
                   <span style={{
                     fontSize: '0.75rem',
                     padding: '2px 6px',
                     borderRadius: '4px',
-                    background: isSelected ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.05)',
+                    background: isSelected ? 'var(--bg-tr-hover)' : 'var(--bg-btn-secondary)',
                     color: isSelected ? 'var(--accent-primary)' : 'var(--text-muted)',
                     fontWeight: '600'
                   }}>
@@ -941,7 +942,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                   style={{
                     width: '150px',
                     padding: '8px 12px',
-                    background: 'rgba(15, 23, 42, 0.6)',
+                    background: 'var(--bg-input)',
                     color: 'var(--text-primary)',
                     border: '1px solid var(--border-color)',
                     borderRadius: '8px',
@@ -977,7 +978,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                   {tournament.aparatos.map(ap => (
                     <th key={ap} style={{ textAlign: 'center' }}>{ap}</th>
                   ))}
-                  <th style={{ textAlign: 'center', background: 'rgba(15, 23, 42, 0.9)', color: 'var(--accent-gold)' }}>TOTAL</th>
+                  <th style={{ textAlign: 'center', background: 'var(--bg-th)', color: 'var(--accent-gold)' }}>TOTAL</th>
                 </tr>
               </thead>
               <tbody>

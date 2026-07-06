@@ -41,6 +41,17 @@ const PORT = 3000;
 app.use(cors());
 app.use(express.json());
 
+// Servir archivos estáticos del frontend desde la carpeta client/dist
+const clientBuildPath = path.join(__dirnameFederacion, '..', 'client', 'dist');
+if (fs.existsSync(clientBuildPath)) {
+  app.use(express.static(clientBuildPath));
+  // Carga SPA en rutas no API
+  app.get(/^(?!\/api).*$/, (req, res) => {
+    res.sendFile(path.join(clientBuildPath, 'index.html'));
+  });
+}
+
+
 // Configuración de Multer para recibir el archivo Excel en memoria
 const upload = multer({ storage: multer.memoryStorage() });
 

@@ -430,7 +430,7 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
         alignItems: 'center',
         padding: '16px 24px',
         marginBottom: '24px',
-        background: 'rgba(15, 23, 42, 0.8)'
+        background: 'var(--bg-card)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
           <div style={{
@@ -862,7 +862,7 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
                     key={idx}
                     onClick={() => setCurrentInputIdx(idx)}
                     style={{
-                      background: 'rgba(15, 23, 42, 0.6)',
+                      background: 'var(--bg-input)',
                       border: `2px solid ${currentInputIdx === idx ? 'var(--accent-primary)' : 'var(--border-color)'}`,
                       borderRadius: '12px',
                       padding: '12px',
@@ -1011,7 +1011,7 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
               <div className="glass-panel" style={{
                 marginTop: '25px',
                 padding: '16px',
-                background: 'rgba(15, 23, 42, 0.4)',
+                background: 'var(--bg-card)',
                 borderColor: 'var(--border-color)'
               }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', textAlign: 'center', marginBottom: '12px' }}>
@@ -1118,7 +1118,7 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
                 <div className="glass-panel animate-fade-in" style={{
                   width: '100%',
                   padding: '30px',
-                  background: 'rgba(15, 23, 42, 0.4)',
+                  background: 'var(--bg-card)',
                   borderColor: 'rgba(59, 130, 246, 0.2)',
                   borderRadius: '16px',
                   marginBottom: '35px',
@@ -1128,7 +1128,7 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
                   <div style={{ fontSize: '0.8rem', color: 'var(--accent-primary)', fontWeight: '700', letterSpacing: '0.05em', marginBottom: '10px' }}>
                     ÚLTIMA CALIFICACIÓN EN {selectedApparatus.toUpperCase()}
                   </div>
-                  <h4 style={{ fontSize: '1.4rem', color: '#fff', fontWeight: '800', marginBottom: '4px' }}>
+                  <h4 style={{ fontSize: '1.4rem', color: 'var(--text-primary)', fontWeight: '800', marginBottom: '4px' }}>
                     {lastScore.gymnast.nombre}
                   </h4>
                   <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '15px' }}>
