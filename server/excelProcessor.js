@@ -8,8 +8,8 @@ const extractYear = (value) => {
   const strVal = String(value).trim();
   if (/^\d{4}$/.test(strVal)) return strVal;
 
-  // Si viene en formato fecha DD-MM-YYYY, DD/MM/YYYY o YYYY-MM-DD
-  const parts = strVal.split(/[-/]/);
+  // Si viene en formato fecha DD-MM-YYYY, DD/MM/YYYY, DD.MM.YYYY o YYYY-MM-DD
+  const parts = strVal.split(/[-/.]/);
   if (parts.length === 3) {
     // Si el primer elemento es de 4 dígitos, asumimos YYYY-MM-DD
     if (parts[0].length === 4) return parts[0];
@@ -24,29 +24,34 @@ const extractYear = (value) => {
 
   // Si SheetJS leyó una fecha serial de Excel
   if (typeof value === 'number' && value > 10000 && value < 60000) {
-    // Convertir fecha serial de Excel
-    const date = new Date((value - 25569) * 86400 * 1000);
+    // Convertir fecha serial de Excel usando UTC para evitar desfases de huso horario
+    const date = new Date(Math.round((value - 25569) * 86400 * 1000));
     if (!isNaN(date.getTime())) {
-      return String(date.getFullYear());
+      return String(date.getUTCFullYear());
     }
   }
+  
+  // Si es un objeto Date
+  if (value instanceof Date && !isNaN(value.getTime())) {
+    return String(value.getUTCFullYear());
+  }
 
-  // Intento de buscar un año en cualquier parte del string
+  // Si tiene un formato de fecha textual en español, intentar buscar un número de 4 dígitos
   const yearMatch = strVal.match(/\b(19\d{2}|20\d{2})\b/);
   if (yearMatch) return yearMatch[1];
 
-  return strVal;
+  return '';
 };
 
-// Formatear fechas en formato legible DD/MM/YYYY si se desea mostrar completo
+// Formatear fechas en formato legible DD/MM/YYYY
 const formatBirthdate = (value) => {
   if (!value) return '';
   if (typeof value === 'number' && value > 10000 && value < 60000) {
-    const date = new Date((value - 25569) * 86400 * 1000);
+    const date = new Date(Math.round((value - 25569) * 86400 * 1000));
     if (!isNaN(date.getTime())) {
-      const d = String(date.getDate()).padStart(2, '0');
-      const m = String(date.getMonth() + 1).padStart(2, '0');
-      const y = date.getFullYear();
+      const d = String(date.getUTCDate()).padStart(2, '0');
+      const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+      const y = date.getUTCFullYear();
       return `${d}-${m}-${y}`;
     }
   }
@@ -60,13 +65,13 @@ export const importGimnastasFromExcel = (buffer) => {
   const workbook = XLSX.read(buffer, { type: 'buffer' });
   const sheetName = workbook.SheetNames[0];
   const worksheet = workbook.Sheets[sheetName];
-  const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+  const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
 
-  if (rawData.length < 2) {
-    throw new Error('El archivo Excel está vacío o no contiene suficientes filas.');
+  if (rawData.length === 0) {
+    throw new Error('El archivo Excel está vacío.');
   }
 
-  // Mapear encabezados de la fila 1 (índice 0)
+  // Normalizar encabezados a mayúsculas y limpiar espacios
   const headers = rawData[0].map(h => String(h).toUpperCase().trim());
   
   // Buscar índices de las columnas deseadas
@@ -76,7 +81,7 @@ export const importGimnastasFromExcel = (buffer) => {
 
   const colIdx = {
     nombre: findIndex(['GIMNASTA', 'NOMBRE', 'APELLIDO', 'ATLETA']),
-    nacimiento: findIndex(['FECHA DE NACIMIENTO', 'NACIMIENTO', 'AÑO', 'FECHA_NAC', 'EDAD', 'ANIO']),
+    nacimiento: findIndex(['FECHA DE NACIMIENTO', 'FECHA NACIMIENTO', 'FECHA DE NAC', 'FECHA NAC', 'F. NAC', 'F.NAC', 'F_NAC', 'NACIMIENTO', 'NAC', 'AÑO', 'FECHA_NAC', 'EDAD', 'ANIO']),
     institucion: findIndex(['INSTITUCIÓN', 'INSTITUCION', 'CLUB', 'PROVINCIA', 'SELECCIÓN', 'SELECCION', 'ENTIDAD']),
     categoria: findIndex(['CATEGORÍA', 'CATEGORIA', 'CAT']),
     nivel: findIndex(['NIVEL', 'NIV', 'DIVISIÓN', 'DIVISION']),
@@ -304,6 +309,12 @@ export const exportTournamentToExcel = (tournament, sortBy = 'grupo') => {
   ];
 
   Object.keys(podiumGroups).sort().forEach(key => {
+    const [nivel, categoria, nacimiento] = key.split('_');
+    const groupTitle = nacimiento ? `${nivel} - ${categoria} ${nacimiento}` : `${nivel} - ${categoria}`;
+
+    // Fila de título para la división
+    podiumRows.push([groupTitle.toUpperCase()]);
+
     // Ordenar de mayor a menor total
     podiumGroups[key].sort((a, b) => b.totalScore - a.totalScore);
 

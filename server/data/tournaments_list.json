@@ -22,5 +22,13 @@
     "adminPin": "1234",
     "juezPin": "3333",
     "fechaCreacion": "2026-06-25T21:04:12.341Z"
+  },
+  {
+    "id": "torneo-provincial",
+    "nombre": "torneo provincial nivel 1 y 2",
+    "modalidad": "GAF",
+    "adminPin": "1234",
+    "juezPin": "1111",
+    "fechaCreacion": "2026-07-17T13:54:08.803Z"
   }
 ]

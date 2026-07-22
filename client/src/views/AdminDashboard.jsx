@@ -512,10 +512,10 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
     ? gymnasts
     : gymnasts.filter(g => g.grupo === selectedTurno);
   
-  // Agrupar gimnastas por Nivel y Categoría
+  // Agrupar gimnastas por Nivel y Categoría (incluyendo año de nacimiento si existe)
   const groupedRankings = {};
   podiumFilteredGymnasts.forEach(g => {
-    const key = `${g.nivel} - ${g.categoria}`;
+    const key = g.nacimiento ? `${g.nivel} - ${g.categoria} ${g.nacimiento}` : `${g.nivel} - ${g.categoria}`;
     if (!groupedRankings[key]) groupedRankings[key] = [];
 
     // Calcular totales
@@ -582,9 +582,20 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
     return yearsGroup;
   };
 
-  // Clasificación por Equipos (Clubes): suma de las mejores 3 notas de cada aparato por institución
+  const getBaseCategoryKey = (key) => {
+    return key.replace(/\s+\d{4}$/, '').trim();
+  };
+
+  // Clasificación por Equipos (Clubes): suma de las mejores 3 notas de cada aparato por institución (agrupando subdivisiones)
   const getTeamRankings = (groupKey) => {
-    const members = groupedRankings[groupKey] || [];
+    const baseKey = getBaseCategoryKey(groupKey);
+    const members = [];
+    Object.keys(groupedRankings).forEach(k => {
+      if (getBaseCategoryKey(k) === baseKey) {
+        members.push(...groupedRankings[k]);
+      }
+    });
+
     const clubMembers = {};
     members.forEach(m => {
       if (!clubMembers[m.institucion]) clubMembers[m.institucion] = [];
@@ -610,7 +621,8 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
         totalEquipo += scoresPorAparato[ap];
       });
 
-      const descuento = tournament.descuentosEquipos?.[groupKey]?.[clubName] || 0;
+      const descuento = tournament.descuentosEquipos?.[baseKey]?.[clubName] || 
+                         tournament.descuentosEquipos?.[groupKey]?.[clubName] || 0;
       const totalConDescuento = parseFloat(Math.max(0, totalEquipo - descuento).toFixed(3));
 
       clubResults.push({

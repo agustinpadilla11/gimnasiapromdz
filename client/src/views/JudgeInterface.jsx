@@ -43,6 +43,7 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
   // Configuración de notas de jueces
   const [numJueces, setNumJueces] = useState(2); // Por defecto 2 jueces como la planilla
   const [juezDeductions, setJuezDeductions] = useState(['', '', '', '', '', '']); // Deducciones de Juez 1 a 6
+  const [mesaDeduction, setMesaDeduction] = useState(0); // Descuento de mesa (penalizaciones neutrales)
   const [currentInputIdx, setCurrentInputIdx] = useState(0); // Foco en el teclado numérico virtual
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState('');
@@ -193,6 +194,13 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
 
   // Filtrar gimnastas
   const filteredGymnasts = gymnasts.filter(g => {
+    // Si es Nivel 1B, solo compite en Salto y Suelo
+    const isNivel1B = g.nivel && g.nivel.toLowerCase().replace(/\s+/g, '').includes('1b');
+    if (isNivel1B) {
+      const isSaltoOrSuelo = selectedApparatus.toLowerCase().includes('salto') || selectedApparatus.toLowerCase().includes('suelo');
+      if (!isSaltoOrSuelo) return false;
+    }
+
     const matchTurno = g.grupo === activeTurno;
     const matchNivel = activeNivel === 'Todos' || g.nivel === activeNivel;
     const matchCategoria = activeCategoria === 'Todos' || g.categoria === activeCategoria;
@@ -225,8 +233,10 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
       });
       setJuezDeductions(newDeductions);
       setNumJueces(notaExistente.jueces.length);
+      setMesaDeduction(notaExistente.dtos !== undefined ? parseFloat(notaExistente.dtos) : 0);
     } else {
       setJuezDeductions(['', '', '', '', '', '']);
+      setMesaDeduction(0);
     }
     setCurrentInputIdx(0);
   };
@@ -263,7 +273,15 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
 
     const base = getBaseScoreForGymnast(selectedGymnast);
 
-    if (activeVals.length === 0) return { promedio: 0, notaB: base, final: base };
+    if (activeVals.length === 0) {
+      const final = base - mesaDeduction;
+      return {
+        promedio: 0,
+        notaB: base,
+        final: parseFloat(final.toFixed(3)),
+        numActive: 0
+      };
+    }
 
     const promedio = activeVals.reduce((a, b) => a + b, 0) / activeVals.length;
     
@@ -274,9 +292,7 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
       notaB = base - promedio;
     }
     
-    // Si la gimnasta ya tiene descuentos extra en cómputos, mantenerlos
-    const dtos = selectedGymnast?.notas?.[selectedApparatus]?.dtos || 0;
-    const final = notaB - dtos;
+    const final = notaB - mesaDeduction;
 
     return {
       promedio: parseFloat(promedio.toFixed(3)),
@@ -314,7 +330,7 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
           gymnastId: selectedGymnast.id,
           aparato: selectedApparatus,
           jueces: juezDeductions.slice(0, numJueces).map(v => v === '' ? null : parseFloat(v)),
-          dtos: selectedGymnast.notas?.[selectedApparatus]?.dtos || 0,
+          dtos: mesaDeduction,
           baseScore: getBaseScoreForGymnast(selectedGymnast)
         })
       });
@@ -467,13 +483,6 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
             ))}
           </select>
 
-          <button 
-            onClick={() => window.open(`${window.location.origin}?view=public&aparato=${selectedApparatus}&tournamentId=${auth.tournamentId}`, '_blank')} 
-            className="btn btn-secondary" 
-            style={{ gap: '8px', border: '1px solid var(--accent-primary)', fontSize: '0.9rem', padding: '8px 14px' }}
-          >
-            Ver Proyección
-          </button>
 
           <button onClick={onLogout} className="btn btn-secondary" style={{ padding: '8px 14px', gap: '6px' }}>
             <LogOut size={16} />
@@ -735,23 +744,6 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', maxWidth: '280px', marginTop: '10px' }}>
                 <button
-                  onClick={handleProjectJudgeScore}
-                  className="btn btn-gold"
-                  style={{
-                    width: '100%',
-                    padding: '14px',
-                    fontSize: '1.1rem',
-                    fontWeight: '700',
-                    gap: '8px',
-                    justifyContent: 'center',
-                    boxShadow: '0 4px 15px rgba(226, 177, 60, 0.25)'
-                  }}
-                >
-                  <Tv size={20} />
-                  Proyectar en TV
-                </button>
-                
-                <button
                   onClick={handleNextGymnast}
                   className="btn btn-primary"
                   style={{
@@ -943,68 +935,77 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
                      }}
                    >
                      Borrar dígito
-                   </button>
+                  </button>
+                  {tournament.modalidad !== 'GAM' ? (
+                    /* ATAJOS RÁPIDOS DE DEDUCCIÓN (DESCUENTOS DE MESA) */
+                    <div>
+                      <h4 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '8px', fontWeight: '600' }}>
+                        Descuento de Mesa (Final)
+                      </h4>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        {[
+                          { l: 'Sin desc. (0.00)', v: '0.00', bg: 'rgba(16, 185, 129, 0.06)', bc: 'rgba(16, 185, 129, 0.25)', tc: 'var(--accent-success)' },
+                          { l: 'Falta Línea / Salida (-0.10)', v: '0.10', bg: 'rgba(239, 68, 68, 0.03)', bc: 'rgba(239, 68, 68, 0.15)', tc: '#f87171' },
+                          { l: 'Falta Presentación (-0.30)', v: '0.30', bg: 'rgba(239, 68, 68, 0.04)', bc: 'rgba(239, 68, 68, 0.2)', tc: '#f87171' },
+                          { l: 'Ayuda Entrenador (-0.50)', v: '0.50', bg: 'rgba(239, 68, 68, 0.06)', bc: 'rgba(239, 68, 68, 0.25)', tc: '#fca5a5' },
+                          { l: 'Falta Vestimenta (-1.00)', v: '1.00', bg: 'rgba(239, 68, 68, 0.12)', bc: 'rgba(239, 68, 68, 0.4)', tc: '#ef4444' }
+                        ].map(item => {
+                          const valNum = parseFloat(item.v);
+                          const isSelected = Math.abs(mesaDeduction - valNum) < 0.001;
+                          return (
+                            <button
+                              key={item.v}
+                              type="button"
+                              onClick={() => setMesaDeduction(valNum)}
+                              className="btn"
+                              style={{
+                                padding: '8px 12px',
+                                fontSize: '0.85rem',
+                                fontWeight: '700',
+                                background: isSelected ? item.bc : item.bg,
+                                border: `1px solid ${item.bc}`,
+                                color: item.tc,
+                                justifyContent: 'flex-start',
+                                transition: 'all 0.1s ease',
+                                boxShadow: isSelected ? `0 0 10px ${item.bc}` : 'none'
+                              }}
+                            >
+                              {item.l} {isSelected ? '✓' : ''}
+                            </button>
+                          );
+                        })}
+                      </div>
+  
+                      {/* Restablecer campos */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setJuezDeductions(['', '', '', '', '', '']);
+                          setMesaDeduction(0);
+                        }}
+                        className="btn btn-secondary"
+                        style={{ width: '100%', marginTop: '16px', gap: '8px', fontSize: '0.85rem' }}
+                      >
+                        <RotateCcw size={14} />
+                        Limpiar todo
+                      </button>
+                    </div>
+                  ) : (
+                    /* Para GAM, botón simple para limpiar */
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setJuezDeductions(['', '', '', '', '', '']);
+                        setMesaDeduction(0);
+                      }}
+                      className="btn btn-secondary"
+                      style={{ width: '100%', marginTop: '16px', gap: '8px', fontSize: '0.85rem' }}
+                    >
+                      <RotateCcw size={14} />
+                      Limpiar notas
+                    </button>
+                  )}
                  </div>
- 
-                 {tournament.modalidad !== 'GAM' ? (
-                   /* ATAJOS RÁPIDOS DE DEDUCCIÓN */
-                   <div>
-                     <h4 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '8px', fontWeight: '600' }}>
-                       Atajos de Deducción
-                     </h4>
-                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                       {[
-                         { l: 'Sin ded. (0.00)', v: '0.00', bg: 'rgba(16, 185, 129, 0.06)', bc: 'rgba(16, 185, 129, 0.25)', tc: 'var(--accent-success)' },
-                         { l: 'Leve (-0.10)', v: '0.10', bg: 'rgba(239, 68, 68, 0.03)', bc: 'rgba(239, 68, 68, 0.15)', tc: '#f87171' },
-                         { l: 'Media (-0.30)', v: '0.30', bg: 'rgba(239, 68, 68, 0.04)', bc: 'rgba(239, 68, 68, 0.2)', tc: '#f87171' },
-                         { l: 'Grave (-0.50)', v: '0.50', bg: 'rgba(239, 68, 68, 0.06)', bc: 'rgba(239, 68, 68, 0.25)', tc: '#fca5a5' },
-                         { l: 'Muy Grave (-0.80)', v: '0.80', bg: 'rgba(239, 68, 68, 0.08)', bc: 'rgba(239, 68, 68, 0.3)', tc: '#fca5a5' },
-                         { l: 'Caída (-1.00)', v: '1.00', bg: 'rgba(239, 68, 68, 0.12)', bc: 'rgba(239, 68, 68, 0.4)', tc: '#ef4444' }
-                       ].map(item => (
-                         <button
-                           key={item.v}
-                           type="button"
-                           onClick={() => handleQuickDeduction(item.v)}
-                           className="btn"
-                           style={{
-                             padding: '8px 12px',
-                             fontSize: '0.85rem',
-                             fontWeight: '700',
-                             background: item.bg,
-                             border: `1px solid ${item.bc}`,
-                             color: item.tc,
-                             justifyContent: 'flex-start',
-                             transition: 'all 0.1s ease'
-                           }}
-                         >
-                           {item.l}
-                         </button>
-                       ))}
-                     </div>
- 
-                     {/* Restablecer campos */}
-                     <button
-                       type="button"
-                       onClick={() => setJuezDeductions(['', '', ''])}
-                       className="btn btn-secondary"
-                       style={{ width: '100%', marginTop: '16px', gap: '8px', fontSize: '0.85rem' }}
-                     >
-                       <RotateCcw size={14} />
-                       Limpiar todo
-                     </button>
-                   </div>
-                 ) : (
-                   /* Para GAM, botón simple para limpiar */
-                   <button
-                     type="button"
-                     onClick={() => setJuezDeductions(['', '', '', '', '', ''])}
-                     className="btn btn-secondary"
-                     style={{ width: '100%', marginTop: '16px', gap: '8px', fontSize: '0.85rem' }}
-                   >
-                     <RotateCcw size={14} />
-                     Limpiar notas
-                   </button>
-                 )}
                </div>
 
               {/* PANEL DE RESULTADOS / FÓRMULA */}
@@ -1042,7 +1043,7 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
                   <div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>DESCUENTOS MESA</div>
                     <div style={{ fontSize: '1.2rem', fontFamily: 'var(--font-mono)', fontWeight: '700', color: '#fda4af' }}>
-                      -{parseFloat(selectedGymnast?.notas?.[selectedApparatus]?.dtos || 0).toFixed(3)}
+                      -{parseFloat(mesaDeduction || 0).toFixed(3)}
                     </div>
                   </div>
                 </div>

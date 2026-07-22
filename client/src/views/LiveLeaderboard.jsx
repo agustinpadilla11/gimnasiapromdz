@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Trophy, Users, Award, ShieldAlert, Zap, Star } from 'lucide-react';
+import { Trophy, Users, Award, ShieldAlert, Zap, Star, Maximize, Minimize } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onChangeView }) {
@@ -22,6 +22,29 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
 
   // Estado para la revelación dramática de puntuaciones en vivo
   const [liveReveal, setLiveReveal] = useState(null);
+
+  // Pantalla completa
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  const handleToggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(err => {
+        console.error(`Error al intentar activar pantalla completa: ${err.message}`);
+      });
+    } else {
+      document.exitFullscreen();
+    }
+  };
   
   // Referencias para timers
   const rotationTimerRef = useRef(null);
@@ -34,16 +57,25 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
 
   const groupedRankings = {};
   filteredGymnastsByTurno.forEach(g => {
-    const key = `${g.nivel} - ${g.categoria}`;
+    const key = g.nacimiento ? `${g.nivel} - ${g.categoria} ${g.nacimiento}` : `${g.nivel} - ${g.categoria}`;
     if (!groupedRankings[key]) groupedRankings[key] = [];
 
     let totalScore = 0;
     let hasScores = false;
     const scores = {};
     if (tournament && tournament.aparatos) {
+      const is1BGroup = key.toLowerCase().replace(/\s+/g, '').includes('1b');
+      const categoryApparatuses = tournament.aparatos.filter(ap => {
+        if (is1BGroup) {
+          const name = ap.toLowerCase();
+          return name.includes('salto') || name.includes('suelo');
+        }
+        return true;
+      });
+
       tournament.aparatos.forEach(ap => {
         const note = g.notas?.[ap]?.final;
-        if (note !== undefined && note !== null) {
+        if (categoryApparatuses.includes(ap) && note !== undefined && note !== null) {
           scores[ap] = parseFloat(note);
           totalScore += parseFloat(note);
           hasScores = true;
@@ -82,14 +114,34 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
   const activeGroupKey = rotatedGroups[safeGroupIndex] || '';
 
   const availableTurnos = [...new Set(gymnasts.map(g => g.grupo || 'Turno 1'))].filter(Boolean).sort();
-  const allGroups = [...new Set(gymnasts.map(g => `${g.nivel} - ${g.categoria}`))].filter(Boolean).sort();
+  const allGroups = [...new Set(gymnasts.map(g => g.nacimiento ? `${g.nivel} - ${g.categoria} ${g.nacimiento}` : `${g.nivel} - ${g.categoria}`))].filter(Boolean).sort();
   
   // Obtener gimnastas del grupo actual
   const currentGroupGymnasts = groupedRankings[activeGroupKey] || [];
 
-  // Obtener ranking por equipos del grupo actual
+  const is1BGroup = activeGroupKey && activeGroupKey.toLowerCase().replace(/\s+/g, '').includes('1b');
+  const displayApparatuses = tournament ? tournament.aparatos.filter(ap => {
+    if (is1BGroup) {
+      const name = ap.toLowerCase();
+      return name.includes('salto') || name.includes('suelo');
+    }
+    return true;
+  }) : [];
+
+  const getBaseCategoryKey = (key) => {
+    return key.replace(/\s+\d{4}$/, '').trim();
+  };
+
+  // Obtener ranking por equipos del grupo actual (agrupado por categoría base sin año)
   const getTeamRankings = (groupKey) => {
-    const members = groupedRankings[groupKey] || [];
+    const baseKey = getBaseCategoryKey(groupKey);
+    const members = [];
+    Object.keys(groupedRankings).forEach(k => {
+      if (getBaseCategoryKey(k) === baseKey) {
+        members.push(...groupedRankings[k]);
+      }
+    });
+
     const clubMembers = {};
     members.forEach(m => {
       if (!clubMembers[m.institucion]) clubMembers[m.institucion] = [];
@@ -103,7 +155,20 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
       const scoresPorAparato = {};
 
       if (tournament && tournament.aparatos) {
+        const is1BGroup = baseKey.toLowerCase().replace(/\s+/g, '').includes('1b');
+        const categoryApparatuses = tournament.aparatos.filter(ap => {
+          if (is1BGroup) {
+            const name = ap.toLowerCase();
+            return name.includes('salto') || name.includes('suelo');
+          }
+          return true;
+        });
+
         tournament.aparatos.forEach(ap => {
+          if (!categoryApparatuses.includes(ap)) {
+            scoresPorAparato[ap] = 0;
+            return;
+          }
           const notes = clMembers
             .map(m => m.scores[ap])
             .filter(n => n !== null && n !== undefined)
@@ -116,7 +181,8 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
         });
       }
 
-      const descuento = tournament.descuentosEquipos?.[groupKey]?.[clubName] || 0;
+      const descuento = tournament.descuentosEquipos?.[baseKey]?.[clubName] || 
+                         tournament.descuentosEquipos?.[groupKey]?.[clubName] || 0;
       const totalConDescuento = parseFloat(Math.max(0, totalEquipo - descuento).toFixed(3));
 
       clubResults.push({
@@ -333,70 +399,74 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
         zIndex: 0
       }} />
 
+      {/* Botón flotante para salir de pantalla completa en dispositivos táctiles/sin teclado */}
+      {isFullscreen && (
+        <button
+          onClick={handleToggleFullscreen}
+          style={{
+            position: 'absolute',
+            top: '20px',
+            right: '20px',
+            zIndex: 9999,
+            background: 'rgba(15, 23, 42, 0.6)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            borderRadius: '50%',
+            width: '40px',
+            height: '40px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#fff',
+            cursor: 'pointer',
+            backdropFilter: 'blur(4px)',
+            opacity: 0.3,
+            transition: 'opacity 0.2s'
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.opacity = 1}
+          onMouseLeave={(e) => e.currentTarget.style.opacity = 0.3}
+          title="Salir de Pantalla Completa (ESC)"
+        >
+          <Minimize size={18} />
+        </button>
+      )}
+
       {/* HEADER PRINCIPAL DE PROYECCIÓN */}
-      <header style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '24px 40px',
-        borderBottom: '1px solid rgba(255,255,255,0.04)',
-        background: 'rgba(6, 11, 25, 0.8)',
-        backdropFilter: 'blur(10px)',
-        zIndex: 10
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <img src="/logo.png" alt="Logo" style={{ height: '48px', objectFit: 'contain' }} />
-          <div>
-            <h1 style={{ fontSize: '1.4rem', letterSpacing: '-0.02em', color: '#fff' }}>
-              {tournament.nombre}
-            </h1>
-            <p style={{ color: 'var(--accent-primary)', fontSize: '0.8rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Resultados Oficiales en Vivo
-            </p>
-          </div>
-        </div>
-
-        {/* SELECTOR DE MODO DE PROYECCIÓN Y FILTROS */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <div style={{ display: 'flex', background: 'rgba(255,255,255,0.02)', padding: '4px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)', gap: '4px' }}>
-            <button 
-              onClick={() => setProjectionMode('carrusel')} 
-              style={{
-                padding: '6px 14px',
-                fontSize: '0.8rem',
-                fontWeight: '700',
-                borderRadius: '8px',
-                border: 'none',
-                cursor: 'pointer',
-                background: projectionMode === 'carrusel' ? 'var(--accent-primary)' : 'transparent',
-                color: projectionMode === 'carrusel' ? '#000' : 'var(--text-secondary)',
-                transition: 'all 0.2s'
-              }}
-            >
-              Carrusel Rotativo
-            </button>
-            <button 
-              onClick={() => setProjectionMode('ultima')} 
-              style={{
-                padding: '6px 14px',
-                fontSize: '0.8rem',
-                fontWeight: '700',
-                borderRadius: '8px',
-                border: 'none',
-                cursor: 'pointer',
-                background: projectionMode === 'ultima' ? 'var(--accent-primary)' : 'transparent',
-                color: projectionMode === 'ultima' ? '#000' : 'var(--text-secondary)',
-                transition: 'all 0.2s'
-              }}
-            >
-              Última Calificación (Fija)
-            </button>
+      {!isFullscreen && (
+        <header style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '24px 40px',
+          borderBottom: '1px solid rgba(255,255,255,0.04)',
+          background: 'rgba(6, 11, 25, 0.8)',
+          backdropFilter: 'blur(10px)',
+          zIndex: 10
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+            <img src="/logo.png" alt="Logo" style={{ height: '48px', objectFit: 'contain' }} />
+            <div>
+              <h1 style={{ fontSize: '1.4rem', letterSpacing: '-0.02em', color: '#fff' }}>
+                {tournament.nombre}
+              </h1>
+              <p style={{ color: 'var(--accent-primary)', fontSize: '0.8rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Resultados Oficiales en Vivo
+              </p>
+            </div>
           </div>
 
-          {projectionMode === 'carrusel' && (
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', background: 'rgba(255,255,255,0.01)', padding: '4px 10px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.04)' }}>
+          {/* FILTROS DE CARRUSEL */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ 
+              display: 'flex', 
+              gap: '12px', 
+              alignItems: 'center', 
+              background: 'rgba(255,255,255,0.02)', 
+              padding: '6px 12px', 
+              borderRadius: '10px', 
+              border: '1px solid rgba(255,255,255,0.05)' 
+            }}>
               {/* Selector de Turno */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 'bold' }}>Turno:</span>
                 <select
                   value={selectedTurno}
@@ -424,8 +494,11 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
                 </select>
               </div>
 
+              {/* Divisor vertical */}
+              <div style={{ width: '1px', height: '18px', background: 'rgba(255,255,255,0.08)' }} />
+
               {/* Selector de Nivel - Categoría Multi-Select */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', position: 'relative' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', position: 'relative' }}>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 'bold' }}>Clasif:</span>
                 
                 <button
@@ -556,141 +629,46 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
                 )}
               </div>
             </div>
-          )}
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <img src="/logo.png" alt="Logo" style={{ height: '32px', objectFit: 'contain' }} />
-            <div style={{ textAlign: 'left' }}>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>SISTEMA</div>
-              <div style={{ fontSize: '0.85rem', color: '#f8fafc', fontWeight: '700' }}>GIMNASIA PRO MDZ</div>
-            </div>
           </div>
-          {auth.role === 'computos' && (
-            <button onClick={() => onChangeView('admin')} className="btn btn-secondary" style={{ padding: '8px 12px', fontSize: '0.8rem', border: '1px solid var(--accent-primary)' }}>
-              Volver a Cómputos
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+            {auth.role === 'computos' && (
+              <button onClick={() => onChangeView('admin')} className="btn btn-secondary" style={{ padding: '8px 12px', fontSize: '0.8rem', border: '1px solid var(--accent-primary)' }}>
+                Volver a Cómputos
+              </button>
+            )}
+            {auth.role === 'jueces' && (
+              <button onClick={() => onChangeView('judge')} className="btn btn-secondary" style={{ padding: '8px 12px', fontSize: '0.8rem', border: '1px solid var(--accent-primary)' }}>
+                Volver a Jueces
+              </button>
+            )}
+            {auth.role === 'publico' && (
+              <button onClick={onLogout} className="btn btn-secondary" style={{ padding: '8px 12px', fontSize: '0.8rem' }}>
+                Volver al Inicio
+              </button>
+            )}
+            <button 
+              onClick={handleToggleFullscreen} 
+              className="btn btn-secondary" 
+              style={{ 
+                padding: '8px 12px', 
+                fontSize: '0.8rem', 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                gap: '6px',
+                border: '1px solid rgba(255, 255, 255, 0.15)'
+              }}
+              title="Pantalla Completa"
+            >
+              {isFullscreen ? <Minimize size={14} /> : <Maximize size={14} />}
+              {isFullscreen ? 'Salir' : 'Pantalla Completa'}
             </button>
-          )}
-          {auth.role === 'jueces' && (
-            <button onClick={() => onChangeView('judge')} className="btn btn-secondary" style={{ padding: '8px 12px', fontSize: '0.8rem', border: '1px solid var(--accent-primary)' }}>
-              Volver a Jueces
-            </button>
-          )}
-          {auth.role === 'publico' && (
-            <button onClick={onLogout} className="btn btn-secondary" style={{ padding: '8px 12px', fontSize: '0.8rem' }}>
-              Volver al Inicio
-            </button>
-          )}
-        </div>
-      </header>
+          </div>
+        </header>
+      )}
 
       {/* PANTALLA PRINCIPAL DE TABLERO DE RESULTADOS */}
-      {projectionMode === 'ultima' ? (
-        <main style={{
-          flex: 1,
-          padding: '40px',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          zIndex: 5
-        }}>
-          {lastProjected ? (
-            <div className="glass-panel" style={{
-              width: '90%',
-              maxWidth: '900px',
-              padding: '50px',
-              textAlign: 'center',
-              background: 'rgba(11, 18, 38, 0.95)',
-              borderWidth: '2px',
-              borderColor: lastProjected.score.final >= 9.20 ? 'var(--accent-gold)' : 'var(--accent-primary)',
-              boxShadow: lastProjected.score.final >= 9.20 ? 'var(--shadow-gold-glow)' : 'var(--shadow-glow)',
-              position: 'relative',
-              borderRadius: '24px',
-              animation: 'fadeIn 0.5s ease-out'
-            }}>
-              {lastProjected.score.final >= 9.20 && (
-                <div style={{
-                  position: 'absolute',
-                  top: '-18px',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  background: 'linear-gradient(135deg, var(--accent-gold), #0284c7)',
-                  color: '#fff',
-                  padding: '6px 20px',
-                  borderRadius: '20px',
-                  fontWeight: '800',
-                  fontSize: '0.85rem',
-                  letterSpacing: '0.1em',
-                  boxShadow: '0 4px 15px rgba(14, 165, 233, 0.4)'
-                }}>
-                  ✨ PUNTUACIÓN SOBRESALIENTE
-                </div>
-              )}
-              
-              {/* Logo en la presentación de la nota */}
-              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
-                <img 
-                  src="/logo.png" 
-                  alt="Gimnasia Pro MDZ" 
-                  style={{
-                    height: '55px',
-                    objectFit: 'contain',
-                    filter: 'drop-shadow(0 0 10px rgba(14, 165, 233, 0.2))'
-                  }}
-                />
-              </div>
-              
-              <div style={{
-                fontSize: '1rem',
-                color: lastProjected.score.final >= 9.20 ? 'var(--accent-gold)' : 'var(--accent-primary)',
-                fontWeight: '800',
-                textTransform: 'uppercase',
-                letterSpacing: '0.15em',
-                marginBottom: '15px'
-              }}>
-                PANTALLA DE RESULTADOS EN VIVO
-              </div>
-
-              <h2 style={{ fontSize: '3.8rem', color: '#fff', fontWeight: '800', marginBottom: '8px', letterSpacing: '-0.02em' }}>
-                {lastProjected.gymnast.nombre}
-              </h2>
-
-              <p style={{ fontSize: '1.6rem', color: 'var(--text-secondary)', marginBottom: '30px' }}>
-                {lastProjected.gymnast.institucion} • <strong>{lastProjected.gymnast.nivel} {lastProjected.gymnast.categoria}</strong>
-              </p>
-
-              <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderTop: '1px solid rgba(255,255,255,0.06)',
-                paddingTop: '40px',
-                marginTop: '10px'
-              }}>
-                <div style={{ fontSize: '1.2rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '15px' }}>
-                  Nota Final
-                </div>
-                <div style={{
-                  fontSize: '8.5rem',
-                  fontFamily: 'var(--font-mono)',
-                  fontWeight: '900',
-                  color: 'var(--accent-success)',
-                  lineHeight: '1',
-                  textShadow: '0 0 40px rgba(16, 185, 129, 0.45)'
-                }}>
-                  {parseFloat(lastProjected.score.final).toFixed(3)}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div style={{ color: 'var(--text-secondary)', fontSize: '1.2rem' }}>
-              Esperando calificaciones para proyectar...
-            </div>
-          )}
-        </main>
-      ) : groupKeys.length > 0 ? (
+      {groupKeys.length > 0 ? (
         <main style={{
           flex: 1,
           padding: '40px',
@@ -722,7 +700,7 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
                 {viewMode === 'individual' ? '🏆 Ranking Individual General' : '👥 Ranking por Equipos'}
               </span>
               <h2 style={{ fontSize: '2.5rem', color: '#fff', fontWeight: '800', letterSpacing: '-0.02em' }}>
-                {activeGroupKey}
+                {viewMode === 'individual' ? activeGroupKey : getBaseCategoryKey(activeGroupKey)}
               </h2>
             </div>
             
@@ -756,7 +734,7 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
                     <th style={{ fontSize: '1rem' }}>GIMNASTA</th>
                     <th style={{ fontSize: '1rem' }}>CLUB / INSTITUCIÓN</th>
                     <th style={{ fontSize: '1rem', textAlign: 'center', width: '90px' }}>AÑO</th>
-                    {tournament.aparatos.map(ap => (
+                    {displayApparatuses.map(ap => (
                       <th key={ap} style={{ textAlign: 'center', fontSize: '1rem' }}>{ap.toUpperCase()}</th>
                     ))}
                     <th style={{ textAlign: 'center', fontSize: '1.1rem', background: 'rgba(226, 177, 60, 0.08)', color: 'var(--accent-gold)', width: '130px' }}>TOTAL</th>
@@ -780,7 +758,7 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
                       <td style={{ fontWeight: '700', color: '#fff' }}>{gym.nombre}</td>
                       <td style={{ color: 'var(--text-secondary)' }}>{gym.institucion}</td>
                       <td style={{ textAlign: 'center', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>{gym.nacimiento || '-'}</td>
-                      {tournament.aparatos.map(ap => (
+                      {displayApparatuses.map(ap => (
                         <td key={ap} style={{ textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: '600' }}>
                           {gym.scores[ap] !== null ? gym.scores[ap].toFixed(3) : '-'}
                         </td>
@@ -800,7 +778,7 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
 
                   {currentGroupGymnasts.length === 0 && (
                     <tr>
-                      <td colSpan={5 + tournament.aparatos.length} style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '50px' }}>
+                      <td colSpan={5 + displayApparatuses.length} style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '50px' }}>
                         Esperando calificaciones...
                       </td>
                     </tr>
@@ -814,7 +792,7 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
                   <tr>
                     <th style={{ width: '80px', textAlign: 'center', fontSize: '1rem' }}>PUESTO</th>
                     <th style={{ fontSize: '1rem' }}>CLUB / INSTITUCIÓN</th>
-                    {tournament.aparatos.map(ap => (
+                    {displayApparatuses.map(ap => (
                       <th key={ap} style={{ textAlign: 'center', fontSize: '1rem' }}>{ap.toUpperCase()} (TOP 3)</th>
                     ))}
                     <th style={{ textAlign: 'center', fontSize: '1.1rem', background: 'rgba(139, 92, 246, 0.08)', color: 'var(--accent-purple)', width: '150px' }}>TOTAL EQUIPO</th>
@@ -836,7 +814,7 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
                         )}
                       </td>
                       <td style={{ fontWeight: '800', color: '#fff' }}>{club.clubName}</td>
-                      {tournament.aparatos.map(ap => (
+                      {displayApparatuses.map(ap => (
                         <td key={ap} style={{ textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: '600' }}>
                           {club.scoresPorAparato[ap] > 0 ? club.scoresPorAparato[ap].toFixed(3) : '-'}
                         </td>
@@ -856,7 +834,7 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
 
                   {currentTeamRankings.length === 0 && (
                     <tr>
-                      <td colSpan={3 + tournament.aparatos.length} style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '50px' }}>
+                      <td colSpan={3 + displayApparatuses.length} style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '50px' }}>
                         No hay suficientes notas registradas para calcular clasificación por equipos.
                       </td>
                     </tr>

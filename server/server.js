@@ -353,6 +353,15 @@ app.post('/api/tournaments/:tournamentId/score', requireAuth, async (req, res) =
     return res.status(404).json({ error: 'Gimnasta no encontrada' });
   }
 
+  // Bloquear notas de otros aparatos para Nivel 1B
+  const is1B = tData.gimnastas[idx].nivel && tData.gimnastas[idx].nivel.toLowerCase().replace(/\s+/g, '').includes('1b');
+  if (is1B) {
+    const isSaltoOrSuelo = aparato.toLowerCase().includes('salto') || aparato.toLowerCase().includes('suelo');
+    if (!isSaltoOrSuelo) {
+      return res.status(400).json({ error: `Nivel 1B solo compite en Salto y Suelo. No se puede calificar en ${aparato}.` });
+    }
+  }
+
   // Verificar que el aparato exista en el torneo
   if (!tData.aparatos.includes(aparato)) {
     return res.status(400).json({ error: `Aparato ${aparato} no es parte del torneo` });
