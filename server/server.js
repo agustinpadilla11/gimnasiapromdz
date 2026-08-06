@@ -67,7 +67,7 @@ const requireFederacion = (req, res, next) => {
 };
 
 // Middleware para verificar PIN de Cómputos (Admin)
-const requireAdmin = (req, res, next) => {
+const requireAdmin = async (req, res, next) => {
   const { tournamentId } = req.params;
   const adminPin = req.headers['x-admin-pin'];
 
@@ -76,7 +76,7 @@ const requireAdmin = (req, res, next) => {
   }
 
   try {
-    const tournament = loadTournament(tournamentId);
+    const tournament = await loadTournament(tournamentId);
     if (tournament.adminPin && tournament.adminPin !== adminPin) {
       return res.status(403).json({ error: 'PIN de Administración incorrecto' });
     }
@@ -88,7 +88,7 @@ const requireAdmin = (req, res, next) => {
 };
 
 // Middleware para verificar PIN de Juez u Cómputos
-const requireAuth = (req, res, next) => {
+const requireAuth = async (req, res, next) => {
   const { tournamentId } = req.params;
   const adminPin = req.headers['x-admin-pin'];
   const juezPin = req.headers['x-juez-pin'];
@@ -98,7 +98,7 @@ const requireAuth = (req, res, next) => {
   }
 
   try {
-    const tournament = loadTournament(tournamentId);
+    const tournament = await loadTournament(tournamentId);
     const isAdmin = tournament.adminPin && tournament.adminPin === adminPin;
     const isJuez = tournament.juezPin && tournament.juezPin === juezPin;
 
@@ -147,9 +147,9 @@ app.post('/api/auth/federacion', (req, res) => {
 });
 
 // 1. Listar todos los torneos (Básico, sin protección para el selector inicial)
-app.get('/api/tournaments', (req, res) => {
+app.get('/api/tournaments', async (req, res) => {
   try {
-    const list = getTournaments();
+    const list = await getTournaments();
     const userRole = req.headers['x-user-role'];
     const isFederacion = userRole && ['Presidente', 'Secretario', 'Delegado'].includes(userRole);
     
@@ -193,12 +193,12 @@ app.delete('/api/tournaments/:tournamentId', requireFederacion, async (req, res)
 });
 
 // 4. Autenticar acceso a un torneo (Comprueba PIN y devuelve el rol asignado)
-app.post('/api/tournaments/:tournamentId/auth', (req, res) => {
+app.post('/api/tournaments/:tournamentId/auth', async (req, res) => {
   const { tournamentId } = req.params;
   const { pin } = req.body;
 
   try {
-    const tournament = loadTournament(tournamentId);
+    const tournament = await loadTournament(tournamentId);
     if (tournament.adminPin === pin) {
       return res.json({ success: true, role: 'computos', nombre: tournament.nombre, modalidad: tournament.modalidad });
     } else if (tournament.juezPin === pin) {

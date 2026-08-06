@@ -1,72 +1,48 @@
-import fs from 'fs';
+import { createClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const DATA_DIR = path.join(__dirname, 'data');
-const LIST_FILE = path.join(DATA_DIR, 'tournaments_list.json');
+dotenv.config({ path: path.join(__dirname, '.env') });
 
-// Crear directorio de datos si no existe
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  console.warn('Faltan SUPABASE_URL o SUPABASE_KEY en las variables de entorno.');
 }
 
-// Inicializar lista de torneos si no existe
-if (!fs.existsSync(LIST_FILE)) {
-  fs.writeFileSync(LIST_FILE, JSON.stringify([], null, 2));
-}
+const supabase = createClient(supabaseUrl || 'https://mock.supabase.co', supabaseKey || 'mock');
 
-// Bloqueo de escritura para evitar corrupción en accesos concurrentes
-let isWriting = false;
-const queue = [];
-
-const processQueue = async () => {
-  if (isWriting || queue.length === 0) return;
-  isWriting = true;
-  const { filePath, data, resolve, reject } = queue.shift();
+export const getTournaments = async () => {
   try {
-    const tempPath = `${filePath}.tmp`;
-    await fs.promises.writeFile(tempPath, JSON.stringify(data, null, 2), 'utf8');
-    await fs.promises.rename(tempPath, filePath);
-    resolve();
-  } catch (err) {
-    reject(err);
-  } finally {
-    isWriting = false;
-    processQueue();
-  }
-};
-
-const writeJsonAtomic = (filePath, data) => {
-  return new Promise((resolve, reject) => {
-    queue.push({ filePath, data, resolve, reject });
-    processQueue();
-  });
-};
-
-export const getTournaments = () => {
-  try {
-    const data = fs.readFileSync(LIST_FILE, 'utf8');
-    return JSON.parse(data);
+    const { data, error } = await supabase.from('tournaments').select('data');
+    if (error || !data) return [];
+    
+    // Devolvemos el resumen para la lista
+    return data.map(row => ({
+      id: row.data.id,
+      nombre: row.data.nombre,
+      modalidad: row.data.modalidad,
+      adminPin: row.data.adminPin,
+      juezPin: row.data.juezPin,
+      fechaCreacion: row.data.fechaCreacion
+    }));
   } catch (e) {
+    console.error('Error fetching tournaments from Supabase', e);
     return [];
   }
 };
 
-export const saveTournamentsList = async (list) => {
-  await writeJsonAtomic(LIST_FILE, list);
-};
-
 export const createTournament = async (id, nombre, modalidad, adminPin = '1111', juezPin = '5555') => {
-  const tournaments = getTournaments();
-  if (tournaments.some(t => t.id === id)) {
+  const { data: existing } = await supabase.from('tournaments').select('id').eq('id', id).maybeSingle();
+  if (existing) {
     throw new Error('El ID de torneo ya existe');
   }
 
   // Definir aparatos según la modalidad
-  // GAF: Salto, Paralelas, Viga, Suelo
-  // GAM: Suelo, Arzones, Anillas, Salto, Paralelas, Barra Fija
   const aparatos = modalidad === 'GAF' 
     ? ['Salto', 'Paralelas', 'Viga', 'Suelo'] 
     : ['Suelo', 'Arzones', 'Anillas', 'Salto', 'Paralelas', 'Barra Fija'];
@@ -86,42 +62,26 @@ export const createTournament = async (id, nombre, modalidad, adminPin = '1111',
     gimnastas: []
   };
 
-  // Guardar archivo del torneo
-  const tournamentFile = path.join(DATA_DIR, `torneo_${id}.json`);
-  await writeJsonAtomic(tournamentFile, nuevoTorneoData);
-
-  // Actualizar lista general
-  tournaments.push(nuevoTorneoInfo);
-  await saveTournamentsList(tournaments);
+  const { error } = await supabase.from('tournaments').insert([{ id, data: nuevoTorneoData }]);
+  if (error) throw new Error('Error al guardar en Supabase: ' + error.message);
 
   return nuevoTorneoData;
 };
 
-export const loadTournament = (id) => {
-  const tournamentFile = path.join(DATA_DIR, `torneo_${id}.json`);
-  if (!fs.existsSync(tournamentFile)) {
+export const loadTournament = async (id) => {
+  const { data, error } = await supabase.from('tournaments').select('data').eq('id', id).maybeSingle();
+  if (error || !data) {
     throw new Error('Torneo no encontrado');
   }
-  try {
-    const data = fs.readFileSync(tournamentFile, 'utf8');
-    return JSON.parse(data);
-  } catch (e) {
-    throw new Error('Error al leer el archivo de torneo');
-  }
+  return data.data;
 };
 
-export const saveTournamentData = async (id, data) => {
-  const tournamentFile = path.join(DATA_DIR, `torneo_${id}.json`);
-  await writeJsonAtomic(tournamentFile, data);
+export const saveTournamentData = async (id, dataToSave) => {
+  const { error } = await supabase.from('tournaments').update({ data: dataToSave }).eq('id', id);
+  if (error) throw new Error('Error al guardar datos en Supabase: ' + error.message);
 };
 
 export const deleteTournament = async (id) => {
-  let tournaments = getTournaments();
-  tournaments = tournaments.filter(t => t.id !== id);
-  await saveTournamentsList(tournaments);
-
-  const tournamentFile = path.join(DATA_DIR, `torneo_${id}.json`);
-  if (fs.existsSync(tournamentFile)) {
-    fs.unlinkSync(tournamentFile);
-  }
+  const { error } = await supabase.from('tournaments').delete().eq('id', id);
+  if (error) throw new Error('Error al eliminar torneo: ' + error.message);
 };
