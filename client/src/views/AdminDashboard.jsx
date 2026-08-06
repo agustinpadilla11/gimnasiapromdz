@@ -78,7 +78,11 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
         setTournament(data);
         setGymnasts(data.gimnastas || []);
       } else {
-        setError('No se pudieron cargar los datos del torneo.');
+        if (res.status === 404 || res.status === 401 || res.status === 403) {
+          logout();
+        } else {
+          setError('No se pudieron cargar los datos del torneo.');
+        }
       }
     } catch (e) {
       setError('Error al conectar con el servidor.');
