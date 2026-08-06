@@ -11,10 +11,13 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
-  console.warn('Faltan SUPABASE_URL o SUPABASE_KEY en las variables de entorno.');
+  console.warn('Usando credenciales por defecto (fallback) para Supabase.');
 }
 
-const supabase = createClient(supabaseUrl || 'https://mock.supabase.co', supabaseKey || 'mock');
+const supabase = createClient(
+  supabaseUrl || 'https://dhhfwpmxllmmatojqlao.supabase.co', 
+  supabaseKey || 'sb_publishable_x28NoMh8Hqbq9peQZ8UUsA_l4wbgPML'
+);
 
 export const getTournaments = async () => {
   try {
