@@ -151,6 +151,7 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
     const clubResults = [];
     Object.keys(clubMembers).forEach(clubName => {
       const clMembers = clubMembers[clubName];
+      if (clMembers.length < 3) return;
       let totalEquipo = 0;
       const scoresPorAparato = {};
 
@@ -793,7 +794,7 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
                     <th style={{ width: '80px', textAlign: 'center', fontSize: '1rem' }}>PUESTO</th>
                     <th style={{ fontSize: '1rem' }}>CLUB / INSTITUCIÓN</th>
                     {displayApparatuses.map(ap => (
-                      <th key={ap} style={{ textAlign: 'center', fontSize: '1rem' }}>{ap.toUpperCase()} (TOP 3)</th>
+                      <th key={ap} style={{ textAlign: 'center', fontSize: '1rem' }}>{ap.toUpperCase()}</th>
                     ))}
                     <th style={{ textAlign: 'center', fontSize: '1.1rem', background: 'rgba(139, 92, 246, 0.08)', color: 'var(--accent-purple)', width: '150px' }}>TOTAL EQUIPO</th>
                   </tr>

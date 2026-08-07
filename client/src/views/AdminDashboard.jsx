@@ -609,6 +609,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
     const clubResults = [];
     Object.keys(clubMembers).forEach(clubName => {
       const clMembers = clubMembers[clubName];
+      if (clMembers.length < 3) return;
       let totalEquipo = 0;
       const scoresPorAparato = {};
 
