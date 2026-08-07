@@ -519,7 +519,10 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
   // Agrupar gimnastas por Nivel y Categoría (incluyendo año de nacimiento si existe)
   const groupedRankings = {};
   podiumFilteredGymnasts.forEach(g => {
-    const key = g.nacimiento ? `${g.nivel} - ${g.categoria} ${g.nacimiento}` : `${g.nivel} - ${g.categoria}`;
+    const formatStr = (str) => str ? str.trim().toLowerCase().replace(/\b\w/g, l => l.toUpperCase()) : '';
+    const nivelFmt = formatStr(g.nivel);
+    const catFmt = formatStr(g.categoria);
+    const key = g.nacimiento ? `${nivelFmt} - ${catFmt} ${g.nacimiento}` : `${nivelFmt} - ${catFmt}`;
     if (!groupedRankings[key]) groupedRankings[key] = [];
 
     // Calcular totales
