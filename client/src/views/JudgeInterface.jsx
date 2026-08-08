@@ -149,9 +149,10 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
 
       const key = e.key;
 
-      if (/^[0-9.]$/.test(key)) {
+      if (/^[0-9.,]$/.test(key)) {
         e.preventDefault();
-        handleKeypadPress(key);
+        const val = key === ',' ? '.' : key;
+        handleKeypadPress(val);
       } else if (key === 'Backspace') {
         e.preventDefault();
         handleKeypadPress('BACK');
