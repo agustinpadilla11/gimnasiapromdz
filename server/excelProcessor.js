@@ -432,6 +432,60 @@ export const exportTournamentToExcel = (tournament, sortBy = 'grupo') => {
   const teamWS = XLSX.utils.aoa_to_sheet(teamRows);
   XLSX.utils.book_append_sheet(workbook, teamWS, 'Podio por Equipos');
 
+  // 5. Ranking por Aparatos
+  const aparatoRankingRows = [];
+  
+  Object.keys(podiumGroups).sort().forEach(key => {
+    const [nivel, categoria, nacimiento] = key.split('_');
+    const groupTitle = nacimiento ? `${nivel} - ${categoria} ${nacimiento}` : `${nivel} - ${categoria}`;
+    
+    aparatos.forEach(ap => {
+      // Filtrar a los que tienen nota en este aparato
+      const gymnastsInAp = podiumGroups[key].filter(g => g.notas && g.notas[ap]?.final !== undefined && g.notas[ap].final !== null);
+      
+      if (gymnastsInAp.length === 0) return;
+      
+      // Ordenar por nota final del aparato
+      gymnastsInAp.sort((a, b) => parseFloat(b.notas[ap].final) - parseFloat(a.notas[ap].final));
+      
+      aparatoRankingRows.push([`${groupTitle.toUpperCase()} - ${ap.toUpperCase()}`]);
+      aparatoRankingRows.push(['POSICIÓN', 'MEDALLA', 'GIMNASTA', 'INSTITUCIÓN', 'NOTA B', 'DTOS', 'NOTA D', 'TOTAL APARATO']);
+      
+      let rank = 1;
+      for (let idx = 0; idx < gymnastsInAp.length; idx++) {
+        const gym = gymnastsInAp[idx];
+        const noteObj = gym.notas[ap];
+        
+        if (idx > 0 && parseFloat(gymnastsInAp[idx].notas[ap].final) < parseFloat(gymnastsInAp[idx - 1].notas[ap].final)) {
+          rank = idx + 1;
+        }
+        
+        let medalla = '';
+        if (rank === 1) medalla = '🥇 Oro';
+        else if (rank === 2) medalla = '🥈 Plata';
+        else if (rank === 3) medalla = '🥉 Bronce';
+        else medalla = 'Mención';
+        
+        aparatoRankingRows.push([
+          rank,
+          medalla,
+          gym.nombre,
+          gym.institucion,
+          noteObj.notaB !== undefined ? noteObj.notaB : '',
+          noteObj.dtos !== undefined ? noteObj.dtos : '',
+          noteObj.notaD !== undefined ? noteObj.notaD : '',
+          noteObj.final !== undefined ? noteObj.final : ''
+        ]);
+      }
+      aparatoRankingRows.push([]); // Espacio separador
+    });
+  });
+
+  if (aparatoRankingRows.length > 0) {
+    const aparatoRankingWS = XLSX.utils.aoa_to_sheet(aparatoRankingRows);
+    XLSX.utils.book_append_sheet(workbook, aparatoRankingWS, 'Ranking por Aparatos');
+  }
+
   // Retornar buffer de escritura
   return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
 };
