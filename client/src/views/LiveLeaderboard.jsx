@@ -22,6 +22,7 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
 
   // Estado para la revelación dramática de puntuaciones en vivo
   const [liveReveal, setLiveReveal] = useState(null);
+  const [scoreNotifications, setScoreNotifications] = useState([]);
 
   // Pantalla completa
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -284,8 +285,19 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
           // Solo proyectar automáticamente si NO estamos en una pantalla dedicada de juez
           if (!urlApparatus) {
             setLastProjected({ gymnast: msg.gymnast, aparato: msg.aparato, score: msg.score });
-            setProjectionMode('ultima');
-            triggerReveal(msg.gymnast, msg.aparato, msg.score);
+            
+            // Cola de notificaciones flash automáticas (5 segundos)
+            const newNotif = {
+              id: Date.now() + Math.random(),
+              gymnastName: msg.gymnast.nombre,
+              score: msg.score.final,
+              aparato: msg.aparato
+            };
+            setScoreNotifications(prev => [...prev, newNotif]);
+            
+            setTimeout(() => {
+              setScoreNotifications(prev => prev.filter(n => n.id !== newNotif.id));
+            }, 5000);
           }
         } else if (msg.type === 'PROJECT_SCORE') {
           // Si estamos en una pantalla de juez y el aparato no coincide, ignorar la proyección del administrador
@@ -954,6 +966,42 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
           </div>
         </div>
       )}
+
+      {/* FLASH SCORE NOTIFICATIONS (TOASTS QUE NO COLAPSAN) */}
+      <div style={{
+        position: 'fixed',
+        bottom: '40px',
+        right: '40px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '15px',
+        zIndex: 9999,
+        pointerEvents: 'none'
+      }}>
+        {scoreNotifications.map(notif => (
+          <div key={notif.id} className="fade-in" style={{
+            background: 'rgba(11, 18, 38, 0.95)',
+            color: 'white',
+            padding: '25px 35px',
+            borderRadius: '20px',
+            boxShadow: '0 15px 35px rgba(0,0,0,0.5)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minWidth: '320px',
+            border: '2px solid var(--accent-primary)',
+            backdropFilter: 'blur(10px)'
+          }}>
+            <span style={{ fontSize: '1.4rem', fontWeight: 'bold', textTransform: 'uppercase', textAlign: 'center', color: 'var(--text-primary)' }}>
+              {notif.gymnastName}
+            </span>
+            <span style={{ fontSize: '3.5rem', fontWeight: '900', marginTop: '10px', color: 'var(--accent-primary)', textShadow: '0 0 15px rgba(59, 130, 246, 0.5)' }}>
+              {notif.score !== undefined && notif.score !== null ? notif.score.toFixed(3) : '-'}
+            </span>
+          </div>
+        ))}
+      </div>
 
       {/* ESTILOS CSS INLINE ADICIONALES PARA EL FADEIN */}
       <style>{`

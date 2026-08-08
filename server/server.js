@@ -447,6 +447,60 @@ app.put('/api/tournaments/:tournamentId/team-discounts', requireAdmin, async (re
   res.json({ success: true, descuentosEquipos: tData.descuentosEquipos });
 });
 
+// 13. Guardar configuración de turnos (Admin)
+app.put('/api/tournaments/:tournamentId/turnos-config', requireAdmin, async (req, res) => {
+  const { tournamentId } = req.params;
+  const { turnosConfig } = req.body;
+
+  const tData = req.tournament;
+  tData.turnosConfig = turnosConfig || [];
+
+  await saveTournamentData(tournamentId, tData);
+
+  res.json({ success: true, turnosConfig: tData.turnosConfig });
+});
+
+// 14. Asignación automática de turnos basada en configuración (Admin)
+app.post('/api/tournaments/:tournamentId/auto-assign-turnos', requireAdmin, async (req, res) => {
+  const { tournamentId } = req.params;
+  const tData = req.tournament;
+
+  if (!tData.turnosConfig || !Array.isArray(tData.turnosConfig) || tData.turnosConfig.length === 0) {
+    return res.status(400).json({ error: 'No hay configuración de turnos definida' });
+  }
+
+  let updatedCount = 0;
+
+  tData.gimnastas.forEach(g => {
+    // Buscar la primera regla que coincida
+    const matchedRule = tData.turnosConfig.find(rule => {
+      // Si la regla no tiene niveles definidos, aplica a todos. Si tiene, debe coincidir.
+      const matchNivel = !rule.niveles || rule.niveles.length === 0 || rule.niveles.includes(g.nivel);
+      // Lo mismo para categorías
+      const matchCategoria = !rule.categorias || rule.categorias.length === 0 || rule.categorias.includes(g.categoria);
+      
+      // Debe cumplir ambas condiciones (AND lógico). Si ambos están vacíos, matcheará a todos.
+      // Pero usualmente al menos uno tendrá filtros.
+      // Si el usuario no selecciona ningún nivel ni categoría en la UI, matchNivel y matchCategoria serán true.
+      return matchNivel && matchCategoria;
+    });
+
+    if (matchedRule && matchedRule.nombre) {
+      if (g.grupo !== matchedRule.nombre) {
+        g.grupo = matchedRule.nombre;
+        updatedCount++;
+      }
+    }
+  });
+
+  if (updatedCount > 0) {
+    await saveTournamentData(tournamentId, tData);
+    broadcast(tournamentId, { type: 'TOURNAMENT_RELOADED', gimnastas: tData.gimnastas });
+  }
+
+  res.json({ success: true, updatedCount });
+});
+
 // 11. Descargar planilla Excel con resultados
 app.get('/api/tournaments/:tournamentId/export', requireAuth, (req, res) => {
   const { tournamentId } = req.params;

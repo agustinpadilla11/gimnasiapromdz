@@ -8,9 +8,10 @@ import {
 export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChangeView }) {
   const [tournament, setTournament] = useState(null);
   const [gymnasts, setGymnasts] = useState([]);
-  const [activeTab, setActiveTab] = useState('monitoreo'); // 'gimnastas' | 'monitoreo' | 'podios'
+  const [activeTab, setActiveTab] = useState('monitoreo'); // 'gimnastas' | 'monitoreo' | 'podios' | 'turnos'
   const [searchQuery, setSearchQuery] = useState('');
   const [orderBy, setOrderBy] = useState('grupo'); // 'grupo' | 'nivel'
+  const [turnosConfig, setTurnosConfig] = useState([]);
   
   // Estados de carga e informes
   const [loading, setLoading] = useState(false);
@@ -44,6 +45,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
   // Efecto visual para destacar filas actualizadas
   const [flashGymnastId, setFlashGymnastId] = useState(null);
   const [flashApparatus, setFlashApparatus] = useState('');
+  const [scoreNotifications, setScoreNotifications] = useState([]);
 
   // Estados para Cargar Turno Modal
   const [showTurnoModal, setShowTurnoModal] = useState(false);
@@ -77,6 +79,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
         const data = await res.json();
         setTournament(data);
         setGymnasts(data.gimnastas || []);
+        setTurnosConfig(data.turnosConfig || []);
       } else {
         if (res.status === 404 || res.status === 401 || res.status === 403) {
           logout();
@@ -122,6 +125,18 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
             setFlashGymnastId(null);
             setFlashApparatus('');
           }, 2000);
+
+          // Agregar notificación flash de la nota (5 segundos)
+          const newNotif = {
+            id: Date.now() + Math.random(),
+            gymnastName: msg.gymnast.nombre,
+            score: msg.score.final
+          };
+          setScoreNotifications(prev => [...prev, newNotif]);
+          
+          setTimeout(() => {
+            setScoreNotifications(prev => prev.filter(n => n.id !== newNotif.id));
+          }, 5000);
         }
       } catch (e) {
         console.error('Error al procesar mensaje de WebSocket:', e);
@@ -842,6 +857,13 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
         >
           <Trophy size={18} style={{ verticalAlign: 'middle', marginRight: '6px' }} />
           Clasificaciones y Podios
+        </button>
+        <button 
+          onClick={() => setActiveTab('turnos')} 
+          className={`tab-btn ${activeTab === 'turnos' ? 'active' : ''}`}
+        >
+          <Calendar size={18} style={{ verticalAlign: 'middle', marginRight: '6px' }} />
+          Config. Turnos
         </button>
       </div>
 
@@ -1810,6 +1832,198 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
           </div>
         </div>
       )}
+
+      {/* --- PESTAÑA: CONFIGURACION DE TURNOS --- */}
+      {activeTab === 'turnos' && (
+        <div className="tab-content fade-in">
+          <div className="glass-panel" style={{ padding: '24px', background: 'var(--bg-card)' }}>
+            <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)', marginBottom: '20px' }}>
+              <Calendar size={24} color="var(--accent-primary)" />
+              Configuración Automática de Turnos
+            </h2>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '24px' }}>
+              Define reglas para asignar automáticamente las gimnastas a los turnos según su Nivel y Categoría.
+            </p>
+
+            <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+              {/* Formulario de nueva regla */}
+              <div style={{ flex: '1 1 300px', background: 'var(--bg-panel)', padding: '20px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                <h3 style={{ fontSize: '1.1rem', marginBottom: '16px', color: 'var(--text-primary)' }}>Nueva Regla de Turno</h3>
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  const formData = new FormData(e.target);
+                  const nombre = formData.get('nombre');
+                  const nivelesStr = formData.get('niveles');
+                  const categoriasStr = formData.get('categorias');
+                  
+                  const niveles = nivelesStr ? nivelesStr.split(',').map(s => s.trim()).filter(Boolean) : [];
+                  const categorias = categoriasStr ? categoriasStr.split(',').map(s => s.trim()).filter(Boolean) : [];
+                  
+                  const newRule = { nombre, niveles, categorias };
+                  const newConfig = [...turnosConfig, newRule];
+                  
+                  try {
+                    setLoading(true);
+                    const res = await fetch(`${apiBase}/tournaments/${auth.tournamentId}/turnos-config`, {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json', 'x-admin-pin': auth.pin },
+                      body: JSON.stringify({ turnosConfig: newConfig })
+                    });
+                    if(res.ok) {
+                      setTurnosConfig(newConfig);
+                      showFlashNotification('Regla agregada correctamente.');
+                      e.target.reset();
+                    } else {
+                      setError('Error al guardar regla');
+                    }
+                  } catch (err) {
+                    setError('Error de conexión');
+                  } finally {
+                    setLoading(false);
+                  }
+                }}>
+                  <div className="form-group">
+                    <label>Nombre del Turno y Hora</label>
+                    <input type="text" name="nombre" className="form-control" placeholder="Ej: Turno 1 - 12:00hs" required />
+                  </div>
+                  <div className="form-group">
+                    <label>Niveles (separados por coma)</label>
+                    <input type="text" name="niveles" className="form-control" placeholder="Ej: Nivel 6, Nivel 7" />
+                    <small style={{ color: 'var(--text-muted)' }}>Dejar en blanco para todos los niveles.</small>
+                  </div>
+                  <div className="form-group">
+                    <label>Categorías (separadas por coma)</label>
+                    <input type="text" name="categorias" className="form-control" placeholder="Ej: Juvenil, Mayor" />
+                    <small style={{ color: 'var(--text-muted)' }}>Dejar en blanco para todas las categorías.</small>
+                  </div>
+                  <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '10px' }} disabled={loading}>
+                    <Plus size={18} /> Agregar Regla
+                  </button>
+                </form>
+              </div>
+
+              {/* Lista de reglas y ejecución */}
+              <div style={{ flex: '2 1 400px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div style={{ background: 'var(--bg-panel)', padding: '20px', borderRadius: '12px', border: '1px solid var(--border-color)', flex: 1 }}>
+                  <h3 style={{ fontSize: '1.1rem', marginBottom: '16px', color: 'var(--text-primary)' }}>Reglas Definidas</h3>
+                  {turnosConfig.length === 0 ? (
+                    <p style={{ color: 'var(--text-muted)' }}>No hay reglas definidas.</p>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {turnosConfig.map((rule, idx) => (
+                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-card)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                          <div>
+                            <strong style={{ color: 'var(--accent-primary)', display: 'block' }}>{rule.nombre}</strong>
+                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                              <span style={{ marginRight: '12px' }}><strong>Niveles:</strong> {rule.niveles.length ? rule.niveles.join(', ') : 'Todos'}</span>
+                              <span><strong>Categorías:</strong> {rule.categorias.length ? rule.categorias.join(', ') : 'Todas'}</span>
+                            </div>
+                          </div>
+                          <button 
+                            className="btn-icon" 
+                            style={{ color: 'var(--danger-color)', padding: '8px' }}
+                            onClick={async () => {
+                              if(!window.confirm('¿Eliminar esta regla?')) return;
+                              const newConfig = turnosConfig.filter((_, i) => i !== idx);
+                              try {
+                                setLoading(true);
+                                const res = await fetch(`${apiBase}/tournaments/${auth.tournamentId}/turnos-config`, {
+                                  method: 'PUT',
+                                  headers: { 'Content-Type': 'application/json', 'x-admin-pin': auth.pin },
+                                  body: JSON.stringify({ turnosConfig: newConfig })
+                                });
+                                if(res.ok) {
+                                  setTurnosConfig(newConfig);
+                                  showFlashNotification('Regla eliminada.');
+                                }
+                              } finally {
+                                setLoading(false);
+                              }
+                            }}
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ background: 'rgba(59, 130, 246, 0.1)', padding: '20px', borderRadius: '12px', border: '1px solid var(--accent-primary)' }}>
+                  <h3 style={{ fontSize: '1.1rem', marginBottom: '8px', color: 'var(--text-primary)' }}>Aplicar Asignación</h3>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '16px' }}>
+                    Esta acción asignará el turno correspondiente a todas las gimnastas cargadas basándose en las reglas (de arriba hacia abajo). Las gimnastas que no coincidan mantendrán su turno actual.
+                  </p>
+                  <button 
+                    className="btn btn-primary" 
+                    style={{ width: '100%' }}
+                    disabled={loading || turnosConfig.length === 0}
+                    onClick={async () => {
+                      if(!window.confirm('¿Estás seguro de reasignar los turnos automáticamente a las gimnastas cargadas?')) return;
+                      try {
+                        setLoading(true);
+                        const res = await fetch(`${apiBase}/tournaments/${auth.tournamentId}/auto-assign-turnos`, {
+                          method: 'POST',
+                          headers: { 'x-admin-pin': auth.pin }
+                        });
+                        const data = await res.json();
+                        if(res.ok) {
+                          showFlashNotification(`¡Éxito! Se actualizaron ${data.updatedCount} gimnastas.`);
+                          fetchTournamentData(); // Recargar datos locales
+                        } else {
+                          setError(data.error || 'Error al asignar turnos');
+                        }
+                      } catch (err) {
+                        setError('Error de conexión');
+                      } finally {
+                        setLoading(false);
+                      }
+                    }}
+                  >
+                    <Layers size={18} /> Ejecutar Asignación Automática
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* FLASH SCORE NOTIFICATIONS EN CÓMPUTOS */}
+      <div style={{
+        position: 'fixed',
+        bottom: '30px',
+        right: '30px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '15px',
+        zIndex: 9999,
+        pointerEvents: 'none'
+      }}>
+        {scoreNotifications.map(notif => (
+          <div key={notif.id} className="fade-in" style={{
+            background: 'rgba(11, 18, 38, 0.95)',
+            color: 'white',
+            padding: '20px 30px',
+            borderRadius: '16px',
+            boxShadow: '0 15px 35px rgba(0,0,0,0.5)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minWidth: '280px',
+            border: '2px solid var(--accent-primary)',
+            backdropFilter: 'blur(10px)'
+          }}>
+            <span style={{ fontSize: '1.2rem', fontWeight: 'bold', textTransform: 'uppercase', textAlign: 'center', color: 'var(--text-primary)' }}>
+              {notif.gymnastName}
+            </span>
+            <span style={{ fontSize: '3rem', fontWeight: '900', marginTop: '10px', color: 'var(--accent-primary)', textShadow: '0 0 15px rgba(59, 130, 246, 0.5)' }}>
+              {notif.score !== undefined && notif.score !== null ? notif.score.toFixed(3) : '-'}
+            </span>
+          </div>
+        ))}
+      </div>
 
     </div>
   );
