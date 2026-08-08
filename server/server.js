@@ -377,6 +377,7 @@ app.post('/api/tournaments/:tournamentId/score', requireAuth, async (req, res) =
   let finalScore = 0;
   const base = baseScore !== undefined ? parseFloat(baseScore) : 10.00;
   const discount = dtos !== undefined && dtos !== '' ? parseFloat(dtos) : 0.0;
+  const dScore = req.body.notaD !== undefined && req.body.notaD !== '' ? parseFloat(req.body.notaD) : 0.0;
 
   if (validJueces.length > 0) {
     const averageVal = validJueces.reduce((a, b) => a + b, 0) / validJueces.length;
@@ -387,7 +388,7 @@ app.post('/api/tournaments/:tournamentId/score', requireAuth, async (req, res) =
       averageDeduction = averageVal;
       notaB = base - averageDeduction;
     }
-    finalScore = notaB - discount;
+    finalScore = notaB + dScore - discount;
 
     // Redondear a 3 decimales para evitar problemas de flotantes en ranking
     averageDeduction = parseFloat(averageDeduction.toFixed(3));
@@ -404,6 +405,7 @@ app.post('/api/tournaments/:tournamentId/score', requireAuth, async (req, res) =
   // Guardar puntuación
   tData.gimnastas[idx].notas[aparato] = {
     jueces: jueces.map(v => v !== null && v !== undefined && v !== '' ? parseFloat(v) : null),
+    notaD: dScore,
     notaB,
     dtos: discount,
     final: finalScore,

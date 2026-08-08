@@ -43,6 +43,7 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
   // Configuración de notas de jueces
   const [numJueces, setNumJueces] = useState(2); // Por defecto 2 jueces como la planilla
   const [juezDeductions, setJuezDeductions] = useState(['', '', '', '', '', '']); // Deducciones de Juez 1 a 6
+  const [notaD, setNotaD] = useState(''); // Nota D (Dificultad)
   const [mesaDeduction, setMesaDeduction] = useState(0); // Descuento de mesa (penalizaciones neutrales)
   const [currentInputIdx, setCurrentInputIdx] = useState(0); // Foco en el teclado numérico virtual
   const [submitting, setSubmitting] = useState(false);
@@ -233,9 +234,11 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
       });
       setJuezDeductions(newDeductions);
       setNumJueces(notaExistente.jueces.length);
+      setNotaD(notaExistente.notaD !== undefined ? String(notaExistente.notaD) : '');
       setMesaDeduction(notaExistente.dtos !== undefined ? parseFloat(notaExistente.dtos) : 0);
     } else {
       setJuezDeductions(['', '', '', '', '', '']);
+      setNotaD('');
       setMesaDeduction(0);
     }
     setCurrentInputIdx(0);
@@ -292,7 +295,7 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
       notaB = base - promedio;
     }
     
-    const final = notaB - mesaDeduction;
+    const final = notaB + (parseFloat(notaD) || 0) - mesaDeduction;
 
     return {
       promedio: parseFloat(promedio.toFixed(3)),
@@ -330,6 +333,7 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
           gymnastId: selectedGymnast.id,
           aparato: selectedApparatus,
           jueces: juezDeductions.slice(0, numJueces).map(v => v === '' ? null : parseFloat(v)),
+          notaD: notaD === '' ? 0 : parseFloat(notaD),
           dtos: mesaDeduction,
           baseScore: getBaseScoreForGymnast(selectedGymnast)
         })
@@ -881,6 +885,22 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
                   </div>
                 ))}
               </div>
+
+               {/* NOTA DIFICULTAD (D) */}
+               <div style={{ background: 'var(--bg-input)', padding: '15px', borderRadius: '12px', border: '1px solid var(--border-color)', marginBottom: '20px' }}>
+                 <h4 style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '10px', fontWeight: '600' }}>
+                   Nota D (Dificultad)
+                 </h4>
+                 <input 
+                   type="number" 
+                   step="0.1" 
+                   className="input-field" 
+                   value={notaD} 
+                   onChange={e => setNotaD(e.target.value)} 
+                   placeholder="Ej. 1.5"
+                   style={{ width: '100%', fontSize: '1.2rem', padding: '12px', textAlign: 'center', fontWeight: 'bold' }}
+                 />
+               </div>
 
                <div style={{ 
                  display: 'grid', 
