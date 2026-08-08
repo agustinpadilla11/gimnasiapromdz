@@ -163,17 +163,24 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
         // Si hay un juez posterior, avanzar el foco. Si es el último, enviar nota
         if (currentInputIdx < numJueces - 1) {
           setCurrentInputIdx(prev => prev + 1);
-        } else {
+        } else if (currentInputIdx === numJueces - 1) {
+          setCurrentInputIdx('D');
+        } else if (currentInputIdx === 'D') {
           handleSubmitScore();
         }
       } else if (key === 'ArrowDown' || key === 'Tab') {
         e.preventDefault();
+        if (currentInputIdx === 'D') return;
         if (currentInputIdx < numJueces - 1) {
           setCurrentInputIdx(prev => prev + 1);
+        } else if (currentInputIdx === numJueces - 1) {
+          setCurrentInputIdx('D');
         }
       } else if (key === 'ArrowUp') {
         e.preventDefault();
-        if (currentInputIdx > 0) {
+        if (currentInputIdx === 'D') {
+          setCurrentInputIdx(numJueces - 1);
+        } else if (currentInputIdx > 0) {
           setCurrentInputIdx(prev => prev - 1);
         }
       }
@@ -407,7 +414,9 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
 
   // Teclado virtual
   const handleKeypadPress = (val) => {
-    const currentVal = juezDeductions[currentInputIdx];
+    let currentVal = currentInputIdx === 'D' ? notaD : juezDeductions[currentInputIdx];
+    if (typeof currentVal !== 'string') currentVal = String(currentVal || '');
+    
     let newVal = currentVal;
 
     if (val === 'CLEAR') {
@@ -419,13 +428,16 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
         newVal = currentVal === '' ? '0.' : currentVal + '.';
       }
     } else {
-      // Evitar ingresar múltiples números en el entero si son descuentos estándar (normalmente 0, 1, 2)
       newVal = currentVal + val;
     }
 
-    const updated = [...juezDeductions];
-    updated[currentInputIdx] = newVal;
-    setJuezDeductions(updated);
+    if (currentInputIdx === 'D') {
+      setNotaD(newVal);
+    } else {
+      const updated = [...juezDeductions];
+      updated[currentInputIdx] = newVal;
+      setJuezDeductions(updated);
+    }
   };
 
   // Atajos rápidos para tablet de deducciones
@@ -887,19 +899,31 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
               </div>
 
                {/* NOTA DIFICULTAD (D) */}
-               <div style={{ background: 'var(--bg-input)', padding: '15px', borderRadius: '12px', border: '1px solid var(--border-color)', marginBottom: '20px' }}>
-                 <h4 style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '10px', fontWeight: '600' }}>
+               <div 
+                 onClick={() => setCurrentInputIdx('D')}
+                 style={{ 
+                   background: 'var(--bg-input)', 
+                   padding: '15px', 
+                   borderRadius: '12px', 
+                   border: `2px solid ${currentInputIdx === 'D' ? 'var(--accent-primary)' : 'var(--border-color)'}`,
+                   boxShadow: currentInputIdx === 'D' ? 'var(--shadow-glow)' : 'none',
+                   marginBottom: '20px',
+                   transition: 'all 0.2s ease',
+                   cursor: 'pointer'
+                 }}>
+                 <h4 style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '10px', fontWeight: '600', textAlign: 'center' }}>
                    Nota D (Dificultad)
                  </h4>
-                 <input 
-                   type="number" 
-                   step="0.1" 
-                   className="input-field" 
-                   value={notaD} 
-                   onChange={e => setNotaD(e.target.value)} 
-                   placeholder="Ej. 1.5"
-                   style={{ width: '100%', fontSize: '1.2rem', padding: '12px', textAlign: 'center', fontWeight: 'bold' }}
-                 />
+                 <div style={{
+                   fontSize: '1.8rem',
+                   fontFamily: 'var(--font-mono)',
+                   fontWeight: '700',
+                   minHeight: '40px',
+                   color: notaD !== '' ? 'var(--accent-primary)' : 'var(--text-muted)',
+                   textAlign: 'center'
+                 }}>
+                   {notaD !== '' ? notaD : '-'}
+                 </div>
                </div>
 
                <div style={{ 
