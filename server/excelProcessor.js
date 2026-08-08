@@ -295,7 +295,9 @@ export const exportTournamentToExcel = (tournament, sortBy = 'grupo') => {
       }
     });
     
-    const key = `${g.nivel}_${g.categoria}_${g.nacimiento}`;
+    const isMayor = g.categoria && g.categoria.toLowerCase().includes('mayor');
+    const groupingYear = isMayor ? '' : g.nacimiento;
+    const key = `${g.nivel}_${g.categoria}_${groupingYear}`;
     if (!podiumGroups[key]) podiumGroups[key] = [];
     
     podiumGroups[key].push({
