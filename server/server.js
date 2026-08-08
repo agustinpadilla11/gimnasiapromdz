@@ -474,14 +474,15 @@ app.post('/api/tournaments/:tournamentId/auto-assign-turnos', requireAdmin, asyn
   tData.gimnastas.forEach(g => {
     // Buscar la primera regla que coincida
     const matchedRule = tData.turnosConfig.find(rule => {
-      // Si la regla no tiene niveles definidos, aplica a todos. Si tiene, debe coincidir.
-      const matchNivel = !rule.niveles || rule.niveles.length === 0 || rule.niveles.includes(g.nivel);
-      // Lo mismo para categorías
-      const matchCategoria = !rule.categorias || rule.categorias.length === 0 || rule.categorias.includes(g.categoria);
+      const normalize = (s) => String(s || '').toLowerCase().trim();
+      const ruleNiveles = (rule.niveles || []).map(normalize);
+      const ruleCategorias = (rule.categorias || []).map(normalize);
+      const gNivel = normalize(g.nivel);
+      const gCategoria = normalize(g.categoria);
+
+      const matchNivel = ruleNiveles.length === 0 || ruleNiveles.some(n => gNivel.includes(n) || n.includes(gNivel));
+      const matchCategoria = ruleCategorias.length === 0 || ruleCategorias.some(c => gCategoria.includes(c) || c.includes(gCategoria));
       
-      // Debe cumplir ambas condiciones (AND lógico). Si ambos están vacíos, matcheará a todos.
-      // Pero usualmente al menos uno tendrá filtros.
-      // Si el usuario no selecciona ningún nivel ni categoría en la UI, matchNivel y matchCategoria serán true.
       return matchNivel && matchCategoria;
     });
 

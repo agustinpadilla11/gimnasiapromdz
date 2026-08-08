@@ -302,6 +302,7 @@ export const exportTournamentToExcel = (tournament, sortBy = 'grupo') => {
     
     podiumGroups[key].push({
       ...g,
+      nacimiento: isMayor ? '' : g.nacimiento,
       totalScore: hasScores ? parseFloat(totalScore.toFixed(3)) : 0
     });
   });
