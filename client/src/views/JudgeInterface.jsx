@@ -191,7 +191,7 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [selectedGymnast, currentInputIdx, numJueces, juezDeductions]);
+  }, [selectedGymnast, currentInputIdx, numJueces, juezDeductions, notaD]);
 
   if (!tournament) {
     return (
