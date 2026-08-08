@@ -1463,6 +1463,95 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                   </div>
 
                 </div>
+
+                {/* NUEVO: CLASIFICACIONES POR APARATO */}
+                <div style={{ marginTop: '40px' }}>
+                  <h3 style={{ fontSize: '1.1rem', marginBottom: '15px', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Award size={18} />
+                    Clasificación por Aparatos
+                  </h3>
+                  
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+                    {Object.keys(podiumsByYear).sort().map(year => (
+                      <div key={year} style={{ gridColumn: '1 / -1' }}>
+                        <div style={{
+                          background: 'rgba(255, 255, 255, 0.02)',
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          borderLeft: '4px solid var(--accent-primary)',
+                          fontWeight: '700',
+                          fontSize: '0.9rem',
+                          marginBottom: '15px'
+                        }}>
+                          AÑO DE NACIMIENTO: {year}
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '15px' }}>
+                          {tournament.aparatos.map(ap => {
+                            const gymnastsInAp = podiumsByYear[year]
+                              .filter(g => g.scores && g.scores[ap] !== null && g.scores[ap] !== undefined)
+                              .map(g => ({ ...g }))
+                              .sort((a, b) => b.scores[ap] - a.scores[ap]);
+
+                            if (gymnastsInAp.length === 0) return null;
+
+                            let rank = 1;
+                            for (let idx = 0; idx < gymnastsInAp.length; idx++) {
+                              if (idx > 0 && gymnastsInAp[idx].scores[ap] < gymnastsInAp[idx - 1].scores[ap]) {
+                                rank = idx + 1;
+                              }
+                              gymnastsInAp[idx].rankAp = rank;
+                            }
+
+                            return (
+                              <div key={ap} className="table-container" style={{ border: '1px solid rgba(255,255,255,0.05)' }}>
+                                <div style={{ 
+                                  background: 'rgba(255,255,255,0.02)', 
+                                  padding: '8px', 
+                                  textAlign: 'center', 
+                                  fontWeight: '700', 
+                                  borderBottom: '1px solid rgba(255,255,255,0.05)',
+                                  textTransform: 'uppercase',
+                                  color: 'var(--text-secondary)'
+                                }}>
+                                  {ap}
+                                </div>
+                                <table style={{ margin: 0 }}>
+                                  <thead>
+                                    <tr>
+                                      <th style={{ width: '40px', textAlign: 'center', padding: '6px 4px' }}>Pos.</th>
+                                      <th style={{ padding: '6px' }}>Gimnasta</th>
+                                      <th style={{ padding: '6px' }}>Club</th>
+                                      <th style={{ textAlign: 'center', padding: '6px' }}>Nota</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {gymnastsInAp.map(gym => (
+                                      <tr key={gym.id}>
+                                        <td style={{ textAlign: 'center', padding: '6px 4px' }}>
+                                          {gym.rankAp <= 3 ? (
+                                            <span className={`podium-rank rank-${gym.rankAp}`}>{gym.rankAp}</span>
+                                          ) : (
+                                            <span style={{ fontWeight: '600', fontFamily: 'var(--font-mono)' }}>{gym.rankAp}</span>
+                                          )}
+                                        </td>
+                                        <td style={{ fontWeight: '600', padding: '6px', fontSize: '0.85rem' }}>{gym.nombre}</td>
+                                        <td style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', padding: '6px' }}>{gym.institucion}</td>
+                                        <td style={{ textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: '700', color: 'var(--accent-primary)', padding: '6px' }}>
+                                          {gym.scores[ap].toFixed(3)}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
               </div>
             );
           })}
