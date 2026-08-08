@@ -136,7 +136,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
           
           setTimeout(() => {
             setScoreNotifications(prev => prev.filter(n => n.id !== newNotif.id));
-          }, 5000);
+          }, 10000);
         }
       } catch (e) {
         console.error('Error al procesar mensaje de WebSocket:', e);
@@ -1992,33 +1992,35 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
       {/* FLASH SCORE NOTIFICATIONS EN CÓMPUTOS */}
       <div style={{
         position: 'fixed',
-        bottom: '30px',
-        right: '30px',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
         display: 'flex',
         flexDirection: 'column',
-        gap: '15px',
+        gap: '20px',
         zIndex: 9999,
-        pointerEvents: 'none'
+        pointerEvents: 'none',
+        alignItems: 'center'
       }}>
         {scoreNotifications.map(notif => (
           <div key={notif.id} className="fade-in" style={{
             background: 'rgba(11, 18, 38, 0.95)',
             color: 'white',
-            padding: '20px 30px',
-            borderRadius: '16px',
-            boxShadow: '0 15px 35px rgba(0,0,0,0.5)',
+            padding: '40px 60px',
+            borderRadius: '24px',
+            boxShadow: '0 25px 50px rgba(0,0,0,0.6)',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            minWidth: '280px',
-            border: '2px solid var(--accent-primary)',
-            backdropFilter: 'blur(10px)'
+            minWidth: '400px',
+            border: '3px solid var(--accent-primary)',
+            backdropFilter: 'blur(15px)'
           }}>
-            <span style={{ fontSize: '1.2rem', fontWeight: 'bold', textTransform: 'uppercase', textAlign: 'center', color: 'var(--text-primary)' }}>
+            <span style={{ fontSize: '2rem', fontWeight: 'bold', textTransform: 'uppercase', textAlign: 'center', color: 'var(--text-primary)' }}>
               {notif.gymnastName}
             </span>
-            <span style={{ fontSize: '3rem', fontWeight: '900', marginTop: '10px', color: 'var(--accent-primary)', textShadow: '0 0 15px rgba(59, 130, 246, 0.5)' }}>
+            <span style={{ fontSize: '5rem', fontWeight: '900', marginTop: '15px', color: 'var(--accent-primary)', textShadow: '0 0 25px rgba(59, 130, 246, 0.6)' }}>
               {notif.score !== undefined && notif.score !== null ? notif.score.toFixed(3) : '-'}
             </span>
           </div>

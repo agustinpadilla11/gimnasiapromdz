@@ -297,7 +297,7 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
             
             setTimeout(() => {
               setScoreNotifications(prev => prev.filter(n => n.id !== newNotif.id));
-            }, 5000);
+            }, 10000);
           }
         } else if (msg.type === 'PROJECT_SCORE') {
           // Si estamos en una pantalla de juez y el aparato no coincide, ignorar la proyección del administrador
@@ -970,33 +970,35 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
       {/* FLASH SCORE NOTIFICATIONS (TOASTS QUE NO COLAPSAN) */}
       <div style={{
         position: 'fixed',
-        bottom: '40px',
-        right: '40px',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
         display: 'flex',
         flexDirection: 'column',
-        gap: '15px',
+        gap: '20px',
         zIndex: 9999,
-        pointerEvents: 'none'
+        pointerEvents: 'none',
+        alignItems: 'center'
       }}>
         {scoreNotifications.map(notif => (
           <div key={notif.id} className="fade-in" style={{
             background: 'rgba(11, 18, 38, 0.95)',
             color: 'white',
-            padding: '25px 35px',
-            borderRadius: '20px',
-            boxShadow: '0 15px 35px rgba(0,0,0,0.5)',
+            padding: '50px 80px',
+            borderRadius: '30px',
+            boxShadow: '0 30px 60px rgba(0,0,0,0.7)',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            minWidth: '320px',
-            border: '2px solid var(--accent-primary)',
-            backdropFilter: 'blur(10px)'
+            minWidth: '500px',
+            border: '4px solid var(--accent-primary)',
+            backdropFilter: 'blur(15px)'
           }}>
-            <span style={{ fontSize: '1.4rem', fontWeight: 'bold', textTransform: 'uppercase', textAlign: 'center', color: 'var(--text-primary)' }}>
+            <span style={{ fontSize: '2.5rem', fontWeight: 'bold', textTransform: 'uppercase', textAlign: 'center', color: 'var(--text-primary)' }}>
               {notif.gymnastName}
             </span>
-            <span style={{ fontSize: '3.5rem', fontWeight: '900', marginTop: '10px', color: 'var(--accent-primary)', textShadow: '0 0 15px rgba(59, 130, 246, 0.5)' }}>
+            <span style={{ fontSize: '7rem', fontWeight: '900', marginTop: '15px', color: 'var(--accent-primary)', textShadow: '0 0 30px rgba(59, 130, 246, 0.6)' }}>
               {notif.score !== undefined && notif.score !== null ? notif.score.toFixed(3) : '-'}
             </span>
           </div>
