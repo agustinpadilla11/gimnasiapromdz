@@ -3,6 +3,7 @@ import { LogOut, Check, HelpCircle, Edit2, ChevronRight, User, Settings, CheckCi
 
 export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChangeView }) {
   const [tournament, setTournament] = useState(null);
+  const activeModalidad = tournament ? (auth.ramaJuez || tournament.modalidad) : '';
   const [gymnasts, setGymnasts] = useState([]);
   const [selectedApparatus, setSelectedApparatus] = useState('');
   const [activeTurno, setActiveTurno] = useState('Turno 1');
@@ -63,9 +64,16 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
         setTournament(data);
         setGymnasts(data.gimnastas || []);
         
+        const activeMod = auth.ramaJuez || data.modalidad;
+        const availAp = data.aparatos.filter(ap => {
+          if (data.modalidad !== 'Ambos') return true;
+          if (activeMod === 'GAM') return ap.includes('(M)') || ['Arzones', 'Anillas', 'Barra Fija'].includes(ap);
+          return ap.includes('(F)') || ['Paralelas Asim.', 'Viga'].includes(ap);
+        });
+        
         // Auto-seleccionar primer aparato si no hay ninguno seleccionado
-        if (!selectedApparatus && data.aparatos && data.aparatos.length > 0) {
-          setSelectedApparatus(data.aparatos[0]);
+        if (!selectedApparatus && availAp.length > 0) {
+          setSelectedApparatus(availAp[0]);
         }
       }
     } catch (err) {
@@ -253,7 +261,7 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
   };
 
   const getBaseScoreForGymnast = (gymnast) => {
-    if (!tournament || tournament.modalidad !== 'GAM') return 10.00;
+    if (!tournament || activeModalidad !== 'GAM') return 10.00;
     
     const nivel = gymnast?.nivel || '';
     const categoria = gymnast?.categoria || '';
@@ -297,13 +305,16 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
     const promedio = activeVals.reduce((a, b) => a + b, 0) / activeVals.length;
     
     let notaB = 0;
-    if (tournament.modalidad === 'GAM') {
-      notaB = promedio;
+    let final = 0;
+    
+    if (activeModalidad === 'GAM') {
+      // En GAM el juez ingresa la nota final calculada por él mismo.
+      notaB = promedio; // notaB referenciará el promedio ingresado por jueces para visualización
+      final = promedio;
     } else {
       notaB = base - promedio;
+      final = notaB + (parseFloat(notaD) || 0) - mesaDeduction;
     }
-    
-    const final = notaB + (parseFloat(notaD) || 0) - mesaDeduction;
 
     return {
       promedio: parseFloat(promedio.toFixed(3)),
@@ -463,7 +474,9 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
         alignItems: 'center',
         padding: '16px 24px',
         marginBottom: '24px',
-        background: 'var(--bg-card)'
+        background: 'var(--bg-card)',
+        flexWrap: 'wrap',
+        gap: '15px'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
           <div style={{
@@ -479,7 +492,7 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
           <div>
             <h2 style={{ fontSize: '1.2rem', marginBottom: '2px' }}>Panel de Jueces</h2>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-              {tournament.nombre} ({tournament.modalidad})
+              {tournament.nombre} ({activeModalidad})
             </p>
           </div>
         </div>
@@ -495,7 +508,11 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
               setSelectedGymnast(null);
             }}
           >
-            {tournament.aparatos.map(ap => (
+            {tournament.aparatos.filter(ap => {
+              if (tournament.modalidad !== 'Ambos') return true;
+              if (activeModalidad === 'GAM') return ap.includes('(M)') || ['Arzones', 'Anillas', 'Barra Fija'].includes(ap);
+              return ap.includes('(F)') || ['Paralelas Asim.', 'Viga'].includes(ap);
+            }).map(ap => (
               <option key={ap} value={ap}>{ap}</option>
             ))}
           </select>
@@ -524,7 +541,7 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
           </h3>
 
           {/* Barra de Filtros */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '15px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: '10px', marginBottom: '15px' }}>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label>Turno / Rotación</label>
               <select 
@@ -817,7 +834,7 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
                   {selectedGymnast.institucion} • <strong>{selectedGymnast.nivel} {selectedGymnast.categoria}</strong> {selectedGymnast.nacimiento ? `(Año ${selectedGymnast.nacimiento})` : ''}
                 </p>
-                {tournament.modalidad === 'GAM' && (
+                {activeModalidad === 'GAM' && (
                   <div style={{ 
                     marginTop: '8px', 
                     display: 'inline-block',
@@ -834,11 +851,11 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
               </div>
 
               {/* Selector de número de jueces en mesa */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
                 <span style={{ fontSize: '0.9rem', fontWeight: '500', color: 'var(--text-secondary)' }}>
                   Cantidad de Jueces en Mesa:
                 </span>
-                <div style={{ display: 'flex', gap: '5px' }}>
+                <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
                   {[1, 2, 3, 4, 5, 6].map(n => (
                     <button
                       key={n}
@@ -890,18 +907,19 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
                       fontWeight: '700',
                       minHeight: '40px',
                       color: juezDeductions[idx] !== '' 
-                        ? (tournament.modalidad === 'GAM' ? 'var(--accent-success)' : 'var(--accent-danger)') 
+                        ? (activeModalidad === 'GAM' ? 'var(--accent-success)' : 'var(--accent-danger)') 
                         : 'var(--text-muted)'
                     }}>
                       {juezDeductions[idx] !== '' ? juezDeductions[idx] : '-'}
                     </div>
                   </div>
                 ))}
-              </div>
+               </div>
 
-               {/* NOTA DIFICULTAD (D) */}
-               <div 
-                 onClick={() => setCurrentInputIdx('D')}
+               {/* NOTA DIFICULTAD (D) - Solo para GAF */}
+               {activeModalidad !== 'GAM' && (
+                 <div 
+                   onClick={() => setCurrentInputIdx('D')}
                  style={{ 
                    background: 'var(--bg-input)', 
                    padding: '15px', 
@@ -925,11 +943,12 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
                  }}>
                    {notaD !== '' ? notaD : '-'}
                  </div>
-               </div>
+                </div>
+               )}
 
                <div style={{ 
                  display: 'grid', 
-                 gridTemplateColumns: tournament.modalidad === 'GAM' ? '1fr' : '1.2fr 1fr', 
+                 gridTemplateColumns: isMobile ? '1fr' : (activeModalidad === 'GAM' ? '1fr' : '1.2fr 1fr'), 
                  gap: '20px', 
                  alignItems: 'start' 
                }}>
@@ -981,7 +1000,7 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
                    >
                      Borrar dígito
                   </button>
-                  {tournament.modalidad !== 'GAM' ? (
+                  {activeModalidad !== 'GAM' ? (
                     /* ATAJOS RÁPIDOS DE DEDUCCIÓN (DESCUENTOS DE MESA) */
                     <div>
                       <h4 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '8px', fontWeight: '600' }}>
@@ -1060,38 +1079,35 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
                 background: 'var(--bg-card)',
                 borderColor: 'var(--border-color)'
               }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', textAlign: 'center', marginBottom: '12px' }}>
-                  <div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                      {tournament.modalidad === 'GAM' ? 'PROM. JUECES' : 'PROM. DEDUCCIONES'}
-                    </div>
-                    <div style={{ 
-                      fontSize: '1.2rem', 
-                      fontFamily: 'var(--font-mono)', 
-                      fontWeight: '700', 
-                      color: tournament.modalidad === 'GAM' ? 'var(--accent-success)' : 'var(--accent-danger)' 
-                    }}>
-                      {tournament.modalidad === 'GAM' ? '' : '-'}{scoreCalc.promedio.toFixed(3)}
-                    </div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>NOTA B (EJE)</div>
-                    <div style={{ fontSize: '1.2rem', fontFamily: 'var(--font-mono)', fontWeight: '700', color: 'var(--text-primary)' }}>
-                      {scoreCalc.notaB.toFixed(3)}
-                    </div>
-                    {tournament.modalidad === 'GAM' && (
-                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                        (Base: {getBaseScoreForGymnast(selectedGymnast).toFixed(2)})
+                {activeModalidad !== 'GAM' && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', textAlign: 'center', marginBottom: '12px' }}>
+                    <div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                        PROM. DEDUCCIONES
                       </div>
-                    )}
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>DESCUENTOS MESA</div>
-                    <div style={{ fontSize: '1.2rem', fontFamily: 'var(--font-mono)', fontWeight: '700', color: '#fda4af' }}>
-                      -{parseFloat(mesaDeduction || 0).toFixed(3)}
+                      <div style={{ 
+                        fontSize: '1.2rem', 
+                        fontFamily: 'var(--font-mono)', 
+                        fontWeight: '700', 
+                        color: 'var(--accent-danger)' 
+                      }}>
+                        -{scoreCalc.promedio.toFixed(3)}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>NOTA B (EJE)</div>
+                      <div style={{ fontSize: '1.2rem', fontFamily: 'var(--font-mono)', fontWeight: '700', color: 'var(--text-primary)' }}>
+                        {scoreCalc.notaB.toFixed(3)}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>DESCUENTOS MESA</div>
+                      <div style={{ fontSize: '1.2rem', fontFamily: 'var(--font-mono)', fontWeight: '700', color: '#fda4af' }}>
+                        -{parseFloat(mesaDeduction || 0).toFixed(3)}
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
 
                 <div style={{
                   borderTop: '1px solid var(--border-color)',

@@ -431,3 +431,24 @@ tr:hover td {
   height: 20px;
   fill: currentColor;
 }
+
+/* Responsive Utilities */
+@media (max-width: 768px) {
+  .tabs {
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 5px;
+  }
+  .tab-btn {
+    flex-shrink: 0;
+  }
+  .table-container {
+    -webkit-overflow-scrolling: touch;
+  }
+  th, td {
+    padding: 10px 8px;
+    font-size: 0.85rem;
+  }
+}
+

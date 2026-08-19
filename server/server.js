@@ -100,7 +100,9 @@ const requireAuth = async (req, res, next) => {
   try {
     const tournament = await loadTournament(tournamentId);
     const isAdmin = tournament.adminPin && tournament.adminPin === adminPin;
-    const isJuez = tournament.juezPin && tournament.juezPin === juezPin;
+    const isJuezGaf = tournament.juezPin && tournament.juezPin === juezPin;
+    const isJuezGam = tournament.juezPinGam && tournament.juezPinGam === juezPin;
+    const isJuez = isJuezGaf || isJuezGam;
 
     // Permitir lectura (GET) de forma pública para la pantalla del público,
     // pero asegurando que no se expongan los PINs en la respuesta.
@@ -167,14 +169,14 @@ app.get('/api/tournaments', async (req, res) => {
 
 // 2. Crear un torneo nuevo (Requiere usuario de federación)
 app.post('/api/tournaments', requireFederacion, async (req, res) => {
-  const { id, nombre, modalidad, adminPin, juezPin } = req.body;
+  const { id, nombre, modalidad, adminPin, juezPin, juezPinGam } = req.body;
 
   if (!id || !nombre || !modalidad) {
     return res.status(400).json({ error: 'Faltan campos obligatorios' });
   }
 
   try {
-    const nuevoTorneo = await createTournament(id, nombre, modalidad, adminPin || '1111', juezPin || '5555');
+    const nuevoTorneo = await createTournament(id, nombre, modalidad, adminPin || '1111', juezPin || '5555', juezPinGam || '6666');
     res.status(201).json({ success: true, torneo: nuevoTorneo });
   } catch (e) {
     res.status(400).json({ error: e.message });
@@ -201,8 +203,10 @@ app.post('/api/tournaments/:tournamentId/auth', async (req, res) => {
     const tournament = await loadTournament(tournamentId);
     if (tournament.adminPin === pin) {
       return res.json({ success: true, role: 'computos', nombre: tournament.nombre, modalidad: tournament.modalidad });
+    } else if (tournament.juezPinGam && tournament.juezPinGam === pin) {
+      return res.json({ success: true, role: 'jueces', nombre: tournament.nombre, modalidad: tournament.modalidad, ramaJuez: 'GAM' });
     } else if (tournament.juezPin === pin) {
-      return res.json({ success: true, role: 'jueces', nombre: tournament.nombre, modalidad: tournament.modalidad });
+      return res.json({ success: true, role: 'jueces', nombre: tournament.nombre, modalidad: tournament.modalidad, ramaJuez: 'GAF' });
     }
     res.status(401).json({ error: 'PIN incorrecto' });
   } catch (e) {
@@ -381,14 +385,19 @@ app.post('/api/tournaments/:tournamentId/score', requireAuth, async (req, res) =
 
   if (validJueces.length > 0) {
     const averageVal = validJueces.reduce((a, b) => a + b, 0) / validJueces.length;
-    if (tData.modalidad === 'GAM') {
+    const isGamApparatus = aparato && (aparato.includes('(M)') || ['Arzones', 'Anillas', 'Barra Fija'].includes(aparato));
+    const isGAM = tData.modalidad === 'GAM' || (tData.modalidad === 'Ambos' && isGamApparatus);
+    
+    if (isGAM) {
+      // En GAM, el juez ingresa la nota final (que en el frontend se envía como jueces). No sumamos D ni restamos dtos.
       notaB = averageVal;
-      averageDeduction = base - notaB;
+      averageDeduction = base - notaB; // Calculado solo para logs o mostrar info
+      finalScore = averageVal;
     } else {
       averageDeduction = averageVal;
       notaB = base - averageDeduction;
+      finalScore = notaB + dScore - discount;
     }
-    finalScore = notaB + dScore - discount;
 
     // Redondear a 3 decimales para evitar problemas de flotantes en ranking
     averageDeduction = parseFloat(averageDeduction.toFixed(3));

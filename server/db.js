@@ -39,16 +39,21 @@ export const getTournaments = async () => {
   }
 };
 
-export const createTournament = async (id, nombre, modalidad, adminPin = '1111', juezPin = '5555') => {
+export const createTournament = async (id, nombre, modalidad, adminPin = '1111', juezPin = '5555', juezPinGam = '6666') => {
   const { data: existing } = await supabase.from('tournaments').select('id').eq('id', id).maybeSingle();
   if (existing) {
     throw new Error('El ID de torneo ya existe');
   }
 
   // Definir aparatos según la modalidad
-  const aparatos = modalidad === 'GAF' 
-    ? ['Salto', 'Paralelas', 'Viga', 'Suelo'] 
-    : ['Suelo', 'Arzones', 'Anillas', 'Salto', 'Paralelas', 'Barra Fija'];
+  let aparatos = [];
+  if (modalidad === 'GAF') {
+    aparatos = ['Salto', 'Paralelas', 'Viga', 'Suelo'];
+  } else if (modalidad === 'GAM') {
+    aparatos = ['Suelo', 'Arzones', 'Anillas', 'Salto', 'Paralelas', 'Barra Fija'];
+  } else if (modalidad === 'Ambos') {
+    aparatos = ['Salto (F)', 'Paralelas Asim.', 'Viga', 'Suelo (F)', 'Suelo (M)', 'Arzones', 'Anillas', 'Salto (M)', 'Paralelas (M)', 'Barra Fija'];
+  }
 
   const nuevoTorneoInfo = {
     id,
@@ -56,6 +61,7 @@ export const createTournament = async (id, nombre, modalidad, adminPin = '1111',
     modalidad,
     adminPin,
     juezPin,
+    juezPinGam: modalidad === 'Ambos' ? juezPinGam : undefined,
     fechaCreacion: new Date().toISOString()
   };
 

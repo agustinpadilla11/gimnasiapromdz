@@ -53,6 +53,14 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
   const [turnoFile, setTurnoFile] = useState(null);
   const [selectedTurno, setSelectedTurno] = useState('Todos');
 
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const fileInputRef = useRef(null);
   const wsRef = useRef(null);
 
@@ -444,8 +452,10 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
     }
   };
 
-  const getBaseScoreForGymnast = (gymnast) => {
-    if (!tournament || tournament.modalidad !== 'GAM') return 10.00;
+  const getBaseScoreForGymnast = (gymnast, aparato) => {
+    const isGamApparatus = aparato && (aparato.includes('(M)') || ['Arzones', 'Anillas', 'Barra Fija'].includes(aparato));
+    const isGam = tournament && (tournament.modalidad === 'GAM' || (tournament.modalidad === 'Ambos' && isGamApparatus));
+    if (!isGam) return 10.00;
     
     const nivel = gymnast?.nivel || '';
     const categoria = gymnast?.categoria || '';
@@ -485,7 +495,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
           aparato: scoringApparatus,
           jueces: scoringForm.jueces.map(v => v === '' ? null : parseFloat(v)),
           dtos: parseFloat(scoringForm.dtos) || 0,
-          baseScore: getBaseScoreForGymnast(scoringGymnast)
+          baseScore: getBaseScoreForGymnast(scoringGymnast, scoringApparatus)
         })
       });
 
@@ -721,11 +731,13 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
       {/* HEADER DE LA MESA DE CÓMPUTOS */}
       <header className="glass-panel" style={{
         display: 'flex',
+        flexDirection: isMobile ? 'column' : 'row',
         justifyContent: 'space-between',
-        alignItems: 'center',
+        alignItems: isMobile ? 'flex-start' : 'center',
         padding: '20px 30px',
         marginBottom: '24px',
-        background: 'var(--bg-card)'
+        background: 'var(--bg-card)',
+        gap: '15px'
       }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
@@ -748,7 +760,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
           <h1 style={{ fontSize: '1.6rem', letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>{tournament.nombre}</h1>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
           <button onClick={() => setShowTurnoModal(true)} className="btn btn-secondary" style={{ gap: '8px', border: '1px solid var(--accent-purple)' }}>
             <Calendar size={18} color="var(--accent-purple)" />
             Cargar Turno
@@ -972,10 +984,10 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
       {/* 1. MONITOREO EN VIVO */}
       {activeTab === 'monitoreo' && (
         <div className="glass-panel" style={{ padding: '24px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', marginBottom: '20px', flexDirection: isMobile ? 'column' : 'row', gap: '10px' }}>
             <h3 style={{ fontSize: '1.2rem' }}>Puntuaciones en Tiempo Real</h3>
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                 <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Ordenar por:</span>
                 <select
                   value={orderBy}
@@ -1139,14 +1151,14 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
       {/* 2. GESTIÓN DE GIMNASTAS */}
       {activeTab === 'gimnastas' && (
         <div className="glass-panel" style={{ padding: '24px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', marginBottom: '20px', flexDirection: isMobile ? 'column' : 'row', gap: '15px' }}>
             <div>
               <h3 style={{ fontSize: '1.2rem', marginBottom: '4px' }}>Inscripciones del Torneo</h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
                 Importa planillas Excel o agrega/edita competidoras de forma manual.
               </p>
             </div>
-            <div style={{ display: 'flex', gap: '10px' }}>
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
               <input
                 type="text"
                 placeholder="Buscar por nombre, club, nivel..."
@@ -1240,7 +1252,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
         <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
           
           {/* FILTRO DE TURNO PARA PODIOS */}
-          <div className="glass-panel" style={{ padding: '20px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(20, 30, 54, 0.4)' }}>
+          <div className="glass-panel" style={{ padding: '20px 24px', display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', flexDirection: isMobile ? 'column' : 'row', gap: '15px', background: 'rgba(20, 30, 54, 0.4)' }}>
             <div>
               <h3 style={{ fontSize: '1.2rem', marginBottom: '4px' }}>Resultados y Podios del Torneo</h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
@@ -1248,7 +1260,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
               </p>
             </div>
             
-             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Seleccionar Turno:</span>
                <select
                  value={selectedTurno}
@@ -1294,7 +1306,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                   {groupKey}
                 </h2>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(500px, 1fr))', gap: '30px', alignItems: 'start' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '30px', alignItems: 'start' }}>
                   
                   {/* TABLA PODIO POR AÑO (Clasificación Clave) */}
                   <div>
@@ -1701,29 +1713,31 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
             <div style={{ marginBottom: '20px' }}>
               <h4 style={{ fontSize: '1.1rem' }}>{scoringGymnast.nombre}</h4>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>{scoringGymnast.institucion} • {scoringGymnast.nivel} • {scoringGymnast.categoria}</p>
-              {tournament.modalidad === 'GAM' && (
+              {(tournament.modalidad === 'GAM' || (tournament.modalidad === 'Ambos' && scoringApparatus && (scoringApparatus.includes('(M)') || ['Arzones', 'Anillas', 'Barra Fija'].includes(scoringApparatus)))) && (
                 <p style={{ color: 'var(--accent-primary)', fontSize: '0.9rem', marginTop: '6px', fontWeight: 'bold' }}>
-                  Nota de Partida (Base): {getBaseScoreForGymnast(scoringGymnast).toFixed(2)}
+                  Nota de Partida (Base): {getBaseScoreForGymnast(scoringGymnast, scoringApparatus).toFixed(2)}
                 </p>
               )}
             </div>
 
             {/* Inputs para Notas de Jueces */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
-              {[0, 1, 2, 3, 4, 5].map(idx => (
-                <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', alignItems: 'center', gap: '15px' }}>
-                  <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-                    {tournament.modalidad === 'GAM' ? `Nota Juez ${idx + 1}:` : `Deducción Juez ${idx + 1}:`}
-                  </label>
-                  <input
-                    id={`juez-input-${idx}`}
-                    type="number"
-                    step="0.05"
-                    min="0"
-                    max="10"
-                    placeholder={tournament.modalidad === 'GAM' ? "ej. 8.50" : "ej. 0.50"}
-                    className="input-field"
-                    value={scoringForm.jueces[idx]}
+              {[0, 1, 2, 3, 4, 5].map(idx => {
+                const isGamContext = tournament.modalidad === 'GAM' || (tournament.modalidad === 'Ambos' && scoringApparatus && (scoringApparatus.includes('(M)') || ['Arzones', 'Anillas', 'Barra Fija'].includes(scoringApparatus)));
+                return (
+                  <div key={idx} style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 2fr', alignItems: 'center', gap: '15px' }}>
+                    <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                      {isGamContext ? `Nota Juez ${idx + 1}:` : `Deducción Juez ${idx + 1}:`}
+                    </label>
+                    <input
+                      id={`juez-input-${idx}`}
+                      type="number"
+                      step="0.05"
+                      min="0"
+                      max="10"
+                      placeholder={isGamContext ? "ej. 8.50" : "ej. 0.50"}
+                      className="input-field"
+                      value={scoringForm.jueces[idx]}
                     onKeyDown={(e) => handleModalKeyDown(e, idx)}
                     onChange={(e) => {
                       const updated = [...scoringForm.jueces];
@@ -1732,9 +1746,10 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                     }}
                   />
                 </div>
-              ))}
+                );
+              })}
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', alignItems: 'center', gap: '15px', borderTop: '1px solid var(--border-color)', paddingTop: '15px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 2fr', alignItems: 'center', gap: '15px', borderTop: '1px solid var(--border-color)', paddingTop: '15px' }}>
                 <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Descuento Mesa (DTOS):</label>
                 <input
                   id="dtos-input"
@@ -1807,7 +1822,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '15px' }}>
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label>Categoría</label>
                   <input
@@ -1833,7 +1848,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '15px' }}>
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label>Año Nacimiento</label>
                   <input
@@ -2000,7 +2015,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                       {turnosConfig.map((rule, idx) => (
-                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-card)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-card)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', flexWrap: 'wrap', gap: '10px' }}>
                           <div>
                             <strong style={{ color: 'var(--accent-primary)', display: 'block' }}>{rule.nombre}</strong>
                             <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '4px' }}>

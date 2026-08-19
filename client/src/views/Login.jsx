@@ -61,6 +61,7 @@ export default function Login({ apiBase, onLoginSuccess }) {
           role: data.role,
           nombre: data.nombre,
           modalidad: data.modalidad,
+          ramaJuez: data.ramaJuez,
           pin: pin
         });
       } else {

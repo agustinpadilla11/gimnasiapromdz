@@ -14,6 +14,7 @@ export default function FederationDashboard({ apiBase, auth, onLoginSuccess, onL
   const [newModalidad, setNewModalidad] = useState('GAF');
   const [newAdminPin, setNewAdminPin] = useState('1111');
   const [newJuezPin, setNewJuezPin] = useState('5555');
+  const [newJuezPinGam, setNewJuezPinGam] = useState('6666');
 
   const fetchTournaments = async () => {
     try {
@@ -62,7 +63,8 @@ export default function FederationDashboard({ apiBase, auth, onLoginSuccess, onL
           nombre: newNombre,
           modalidad: newModalidad,
           adminPin: newAdminPin,
-          juezPin: newJuezPin
+          juezPin: newJuezPin,
+          juezPinGam: newModalidad === 'Ambos' ? newJuezPinGam : undefined
         })
       });
 
@@ -259,10 +261,11 @@ export default function FederationDashboard({ apiBase, auth, onLoginSuccess, onL
               >
                 <option value="GAF">GAF (Femenina - 4 Aparatos)</option>
                 <option value="GAM">GAM (Masculina - 6 Aparatos)</option>
+                <option value="Ambos">Ambos (GAF y GAM)</option>
               </select>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: newModalidad === 'Ambos' ? '1fr 1fr 1fr' : '1fr 1fr', gap: '15px', gridColumn: 'span 2' }}>
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label>PIN Cómputos</label>
                 <input
@@ -276,7 +279,7 @@ export default function FederationDashboard({ apiBase, auth, onLoginSuccess, onL
               </div>
 
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>PIN Jueces</label>
+                <label>{newModalidad === 'Ambos' ? 'PIN Jueces GAF' : 'PIN Jueces'}</label>
                 <input
                   type="password"
                   maxLength={6}
@@ -286,6 +289,20 @@ export default function FederationDashboard({ apiBase, auth, onLoginSuccess, onL
                   required
                 />
               </div>
+              
+              {newModalidad === 'Ambos' && (
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label>PIN Jueces GAM</label>
+                  <input
+                    type="password"
+                    maxLength={6}
+                    className="input-field"
+                    value={newJuezPinGam}
+                    onChange={(e) => setNewJuezPinGam(e.target.value)}
+                    required
+                  />
+                </div>
+              )}
             </div>
 
             <div style={{ gridColumn: 'span 2', display: 'flex', gap: '12px', marginTop: '10px' }}>
