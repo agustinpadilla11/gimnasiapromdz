@@ -344,9 +344,8 @@ app.delete('/api/tournaments/:tournamentId/gymnasts/:gymnastId', requireAdmin, a
 
   res.json({ success: true });
 });
-
-// 10. Registrar o editar nota de un aparato (Juez o Admin)
-app.post('/api/tournaments/:tournamentId/score', requireAuth, async (req, res) => {
+// 10. Guardar o actualizar notas (Juez/Admin)
+app.post('/api/tournaments/:tournamentId/score', async (req, res) => {
   const { tournamentId } = req.params;
   const { gymnastId, aparato, jueces, dtos, baseScore } = req.body;
 
@@ -354,89 +353,106 @@ app.post('/api/tournaments/:tournamentId/score', requireAuth, async (req, res) =
     return res.status(400).json({ error: 'Campos requeridos faltantes' });
   }
 
-  const tData = req.tournament;
-  const idx = tData.gimnastas.findIndex(g => g.id === gymnastId);
+  const adminPinHeader = req.headers['x-admin-pin'];
+  const juezPinHeader = req.headers['x-juez-pin'];
 
-  if (idx === -1) {
-    return res.status(404).json({ error: 'Gimnasta no encontrada' });
-  }
+  const lock = getTournamentLock(tournamentId);
+  const release = await lock.acquire();
 
-  // Bloquear notas de otros aparatos para Nivel 1B
-  const is1B = tData.gimnastas[idx].nivel && tData.gimnastas[idx].nivel.toLowerCase().replace(/\s+/g, '').includes('1b');
-  if (is1B) {
-    const isSaltoOrSuelo = aparato.toLowerCase().includes('salto') || aparato.toLowerCase().includes('suelo');
-    if (!isSaltoOrSuelo) {
-      return res.status(400).json({ error: `Nivel 1B solo compite en Salto y Suelo. No se puede calificar en ${aparato}.` });
-    }
-  }
+  try {
+    // 1. Recargar los datos frescos dentro del lock
+    const tData = await loadTournament(tournamentId);
 
-  // Verificar que el aparato exista en el torneo
-  if (!tData.aparatos.includes(aparato)) {
-    return res.status(400).json({ error: `Aparato ${aparato} no es parte del torneo` });
-  }
-
-  // Filtrar notas nulas o vacías de los jueces para calcular promedio
-  const validJueces = jueces
-    .map(val => val !== null && val !== undefined && val !== '' ? parseFloat(val) : null)
-    .filter(val => val !== null && !isNaN(val));
-
-  let averageDeduction = 0;
-  let notaB = 0;
-  let finalScore = 0;
-  const base = baseScore !== undefined ? parseFloat(baseScore) : 10.00;
-  const discount = dtos !== undefined && dtos !== '' ? parseFloat(dtos) : 0.0;
-  const dScore = req.body.notaD !== undefined && req.body.notaD !== '' ? parseFloat(req.body.notaD) : 0.0;
-
-  if (validJueces.length > 0) {
-    const averageVal = validJueces.reduce((a, b) => a + b, 0) / validJueces.length;
-    const isGamApparatus = aparato && (aparato.includes('(M)') || ['Arzones', 'Anillas', 'Barra Fija'].includes(aparato));
-    const isGAM = tData.modalidad === 'GAM' || (tData.modalidad === 'Ambos' && isGamApparatus);
+    // 2. Validar autenticación con los datos frescos
+    const isAdmin = adminPinHeader === tData.adminPin;
+    const isJuez = (juezPinHeader === tData.juezPin) || (tData.juezPinGam && juezPinHeader === tData.juezPinGam);
     
-    if (isGAM) {
-      // En GAM, el juez ingresa la nota final (que en el frontend se envía como jueces). No sumamos D ni restamos dtos.
-      notaB = averageVal;
-      averageDeduction = base - notaB; // Calculado solo para logs o mostrar info
-      finalScore = averageVal;
-    } else {
-      averageDeduction = averageVal;
-      notaB = base - averageDeduction;
-      finalScore = notaB + dScore - discount;
+    if (!isAdmin && !isJuez) {
+      return res.status(403).json({ error: 'PIN de acceso incorrecto para este torneo' });
     }
 
-    // Redondear a 3 decimales para evitar problemas de flotantes en ranking
-    averageDeduction = parseFloat(averageDeduction.toFixed(3));
-    notaB = parseFloat(notaB.toFixed(3));
-    finalScore = parseFloat(finalScore.toFixed(3));
-  } else {
-    // Si no hay jueces cargados, se limpia la nota
-    tData.gimnastas[idx].notas[aparato] = null;
+    const idx = tData.gimnastas.findIndex(g => g.id === gymnastId);
+    if (idx === -1) {
+      return res.status(404).json({ error: 'Gimnasta no encontrada' });
+    }
+
+    // Bloquear notas de otros aparatos para Nivel 1B
+    const is1B = tData.gimnastas[idx].nivel && tData.gimnastas[idx].nivel.toLowerCase().replace(/\s+/g, '').includes('1b');
+    if (is1B) {
+      const isSaltoOrSuelo = aparato.toLowerCase().includes('salto') || aparato.toLowerCase().includes('suelo');
+      if (!isSaltoOrSuelo) {
+        return res.status(400).json({ error: `Nivel 1B solo compite en Salto y Suelo. No se puede calificar en ${aparato}.` });
+      }
+    }
+
+    // Inicializar objeto de notas si no existe
+    if (!tData.gimnastas[idx].notas) tData.gimnastas[idx].notas = {};
+
+    const validJueces = (jueces || [])
+      .map(val => val !== null && val !== undefined && val !== '' ? parseFloat(val) : null)
+      .filter(val => val !== null && !isNaN(val));
+
+    let averageDeduction = 0;
+    let notaB = 0;
+    let finalScore = 0;
+    const base = baseScore !== undefined ? parseFloat(baseScore) : 10.00;
+    const discount = dtos !== undefined && dtos !== '' ? parseFloat(dtos) : 0.0;
+    const dScore = req.body.notaD !== undefined && req.body.notaD !== '' ? parseFloat(req.body.notaD) : 0.0;
+
+    if (validJueces.length > 0) {
+      const averageVal = validJueces.reduce((a, b) => a + b, 0) / validJueces.length;
+      const isGamApparatus = aparato && (aparato.includes('(M)') || ['Arzones', 'Anillas', 'Barra Fija'].includes(aparato));
+      const isGAM = tData.modalidad === 'GAM' || (tData.modalidad === 'Ambos' && isGamApparatus);
+      
+      if (isGAM) {
+        // En GAM, el juez ingresa la nota final. Restamos el descuento de mesa si lo hay.
+        notaB = averageVal;
+        averageDeduction = base - notaB; 
+        finalScore = averageVal - discount;
+      } else {
+        averageDeduction = averageVal;
+        notaB = base - averageDeduction;
+        finalScore = notaB + dScore - discount;
+      }
+
+      // Redondear a 3 decimales
+      averageDeduction = parseFloat(averageDeduction.toFixed(3));
+      notaB = parseFloat(notaB.toFixed(3));
+      finalScore = parseFloat(finalScore.toFixed(3));
+    } else {
+      // Limpiar la nota si no hay jueces
+      tData.gimnastas[idx].notas[aparato] = null;
+      await saveTournamentData(tournamentId, tData);
+      broadcast(tournamentId, { type: 'GYMNAST_UPDATED', gymnast: tData.gimnastas[idx] });
+      return res.json({ success: true, gymnast: tData.gimnastas[idx] });
+    }
+
+    // Guardar puntuación
+    tData.gimnastas[idx].notas[aparato] = {
+      jueces: jueces.map(v => v !== null && v !== undefined && v !== '' ? parseFloat(v) : null),
+      notaD: dScore,
+      notaB,
+      dtos: discount,
+      final: finalScore,
+      baseScore: base,
+      fechaRegistro: new Date().toISOString()
+    };
+
     await saveTournamentData(tournamentId, tData);
-    broadcast(tournamentId, { type: 'GYMNAST_UPDATED', gymnast: tData.gimnastas[idx] });
-    return res.json({ success: true, gymnast: tData.gimnastas[idx] });
+
+    broadcast(tournamentId, { 
+      type: 'SCORE_SUBMITTED', 
+      gymnast: tData.gimnastas[idx],
+      aparato,
+      score: tData.gimnastas[idx].notas[aparato]
+    });
+
+    res.json({ success: true, gymnast: tData.gimnastas[idx] });
+  } catch (err) {
+    res.status(500).json({ error: 'Error al procesar la nota' });
+  } finally {
+    release();
   }
-
-  // Guardar puntuación
-  tData.gimnastas[idx].notas[aparato] = {
-    jueces: jueces.map(v => v !== null && v !== undefined && v !== '' ? parseFloat(v) : null),
-    notaD: dScore,
-    notaB,
-    dtos: discount,
-    final: finalScore,
-    baseScore: base,
-    fechaRegistro: new Date().toISOString()
-  };
-
-  await saveTournamentData(tournamentId, tData);
-
-  // Notificar actualización instantánea a Mesa de Cómputos y Público
-  broadcast(tournamentId, { 
-    type: 'SCORE_SUBMITTED', 
-    gymnast: tData.gimnastas[idx],
-    aparato,
-    score: tData.gimnastas[idx].notas[aparato]
-  });
-
-  res.json({ success: true, gymnast: tData.gimnastas[idx] });
 });
 
 // 12. Actualizar descuentos de equipos (Admin)
