@@ -50,7 +50,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
   // Estados para Cargar Turno Modal
   const [showTurnoModal, setShowTurnoModal] = useState(false);
   const [turnoForm, setTurnoForm] = useState({ name: '', niveles: '' });
-  const [turnoFile, setTurnoFile] = useState(null);
+  const [turnoFiles, setTurnoFiles] = useState([]);
   const [selectedTurno, setSelectedTurno] = useState('Todos');
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -230,8 +230,8 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
       alert('Por favor, ingresa el nombre del turno.');
       return;
     }
-    if (!turnoFile) {
-      alert('Por favor, selecciona un archivo Excel.');
+    if (!turnoFiles || turnoFiles.length === 0) {
+      alert('Por favor, selecciona al menos un archivo Excel.');
       return;
     }
 
@@ -240,7 +240,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
     setSuccess('');
 
     const formData = new FormData();
-    formData.append('file', turnoFile);
+    turnoFiles.forEach(file => formData.append('files', file));
     formData.append('turno', turnoForm.name.trim());
     formData.append('niveles', turnoForm.niveles.trim());
 
@@ -256,7 +256,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
         showFlashNotification(`¡Turno "${turnoForm.name}" cargado con éxito! Se importaron ${data.count} gimnastas.`);
         setShowTurnoModal(false);
         setTurnoForm({ name: '', niveles: '' });
-        setTurnoFile(null);
+        setTurnoFiles([]);
         fetchTournamentData();
       } else {
         setError(data.error || 'Error al cargar el turno.');
@@ -544,7 +544,10 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
   // Agrupar gimnastas por Nivel y Categoría (incluyendo año de nacimiento si existe)
   const groupedRankings = {};
   podiumFilteredGymnasts.forEach(g => {
-    const formatStr = (str) => str ? str.trim().toLowerCase().replace(/\b\w/g, l => l.toUpperCase()) : '';
+    const formatStr = (str) => {
+      if (!str) return '';
+      return str.trim().toLowerCase().split(/\s+/).map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+    };
     const nivelFmt = formatStr(g.nivel);
     const catFmt = formatStr(g.categoria);
     const key = g.nacimiento ? `${nivelFmt} - ${catFmt} ${g.nacimiento}` : `${nivelFmt} - ${catFmt}`;
@@ -837,9 +840,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
         fontSize: '0.9rem'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <MapPin size={16} color="var(--accent-primary)" />
-          <span style={{ color: 'var(--text-secondary)' }}>Instrucciones de Red:</span>
-          <strong style={{ color: 'var(--text-primary)' }}>Conecta tablets de jueces al Wi-Fi y abre la IP de esta PC en el navegador.</strong>
+          {/* Instrucciones removidas */}
         </div>
         <div style={{ display: 'flex', gap: '15px', color: 'var(--text-primary)' }}>
           <div>PIN Jueces: <strong style={{ color: 'var(--accent-primary)', fontFamily: 'var(--font-mono)' }}>{tournament.juezPin || '5555'}</strong></div>
@@ -869,13 +870,6 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
         >
           <Trophy size={18} style={{ verticalAlign: 'middle', marginRight: '6px' }} />
           Clasificaciones y Podios
-        </button>
-        <button 
-          onClick={() => setActiveTab('turnos')} 
-          className={`tab-btn ${activeTab === 'turnos' ? 'active' : ''}`}
-        >
-          <Calendar size={18} style={{ verticalAlign: 'middle', marginRight: '6px' }} />
-          Config. Turnos
         </button>
       </div>
 
@@ -1631,7 +1625,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
               </div>
 
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)', marginBottom: '8px' }}>Cargar Planilla Excel (.xlsx, .xls)</label>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)', marginBottom: '8px' }}>Cargar Planillas Excel (.xlsx, .xls)</label>
                 <div style={{
                   border: '2px dashed var(--border-color)',
                   borderRadius: '10px',
@@ -1643,24 +1637,27 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                 }}
                 onClick={() => document.getElementById('turno-file-input').click()}
                 >
-                  <Upload size={32} color={turnoFile ? 'var(--accent-success)' : 'var(--text-muted)'} style={{ marginBottom: '8px', margin: '0 auto' }} />
-                  {turnoFile ? (
+                  <Upload size={32} color={turnoFiles && turnoFiles.length > 0 ? 'var(--accent-success)' : 'var(--text-muted)'} style={{ marginBottom: '8px', margin: '0 auto' }} />
+                  {turnoFiles && turnoFiles.length > 0 ? (
                     <div>
-                      <p style={{ color: 'var(--accent-success)', fontWeight: '600', fontSize: '0.9rem' }}>{turnoFile.name}</p>
-                      <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '4px' }}>Haz clic para cambiar de archivo</p>
+                      {turnoFiles.map((f, i) => (
+                        <p key={i} style={{ color: 'var(--accent-success)', fontWeight: '600', fontSize: '0.9rem' }}>{f.name}</p>
+                      ))}
+                      <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '4px' }}>Haz clic para re-seleccionar archivos</p>
                     </div>
                   ) : (
                     <div>
-                      <p style={{ fontSize: '0.9rem', fontWeight: '500' }}>Selecciona tu archivo excel aquí</p>
-                      <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '4px' }}>Formato idéntico al de prueba</p>
+                      <p style={{ fontSize: '0.9rem', fontWeight: '500' }}>Selecciona tus archivos excel aquí</p>
+                      <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '4px' }}>Puedes seleccionar múltiples archivos (ej. uno GAM y uno GAF)</p>
                     </div>
                   )}
                   <input
                     type="file"
                     id="turno-file-input"
                     accept=".xlsx, .xls"
+                    multiple
                     style={{ display: 'none' }}
-                    onChange={(e) => setTurnoFile(e.target.files[0])}
+                    onChange={(e) => setTurnoFiles(Array.from(e.target.files))}
                   />
                 </div>
               </div>
@@ -1671,7 +1668,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                   onClick={() => {
                     setShowTurnoModal(false);
                     setTurnoForm({ name: '', niveles: '' });
-                    setTurnoFile(null);
+                    setTurnoFiles([]);
                   }}
                   className="btn btn-secondary"
                   style={{ flex: 1 }}
@@ -1700,7 +1697,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
           alignItems: 'center', zIndex: 1000, padding: '20px'
         }}>
           <div className="glass-panel" style={{
-            width: '100%', maxWidth: '500px', padding: '30px',
+            width: '100%', maxWidth: '500px', maxHeight: '90vh', overflowY: 'auto', padding: '30px',
             background: 'var(--bg-secondary)', border: '1px solid var(--border-color-hover)'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -1785,7 +1782,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
           alignItems: 'center', zIndex: 1000, padding: '20px'
         }}>
           <form onSubmit={handleSaveGymnast} className="glass-panel" style={{
-            width: '100%', maxWidth: '500px', padding: '30px',
+            width: '100%', maxWidth: '500px', maxHeight: '90vh', overflowY: 'auto', padding: '30px',
             background: 'var(--bg-secondary)', border: '1px solid var(--border-color-hover)'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -1937,199 +1934,9 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
         </div>
       )}
 
-      {/* --- PESTAÑA: CONFIGURACION DE TURNOS --- */}
-      {activeTab === 'turnos' && (
-        <div className="tab-content fade-in">
-          <div className="glass-panel" style={{ padding: '24px', background: 'var(--bg-card)' }}>
-            <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)', marginBottom: '20px' }}>
-              <Calendar size={24} color="var(--accent-primary)" />
-              Configuración Automática de Turnos
-            </h2>
-            <p style={{ color: 'var(--text-secondary)', marginBottom: '24px' }}>
-              Define reglas para asignar automáticamente las gimnastas a los turnos según su Nivel y Categoría.
-            </p>
 
-            <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-              {/* Formulario de nueva regla */}
-              <div style={{ flex: '1 1 300px', background: 'var(--bg-panel)', padding: '20px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-                <h3 style={{ fontSize: '1.1rem', marginBottom: '16px', color: 'var(--text-primary)' }}>Nueva Regla de Turno</h3>
-                <form onSubmit={async (e) => {
-                  e.preventDefault();
-                  const formData = new FormData(e.target);
-                  const nombre = formData.get('nombre');
-                  const nivelesStr = formData.get('niveles');
-                  const categoriasStr = formData.get('categorias');
-                  
-                  const niveles = nivelesStr ? nivelesStr.split(',').map(s => s.trim()).filter(Boolean) : [];
-                  const categorias = categoriasStr ? categoriasStr.split(',').map(s => s.trim()).filter(Boolean) : [];
-                  
-                  const newRule = { nombre, niveles, categorias };
-                  const newConfig = [...turnosConfig, newRule];
-                  
-                  try {
-                    setLoading(true);
-                    const res = await fetch(`${apiBase}/tournaments/${auth.tournamentId}/turnos-config`, {
-                      method: 'PUT',
-                      headers: { 'Content-Type': 'application/json', 'x-admin-pin': auth.pin },
-                      body: JSON.stringify({ turnosConfig: newConfig })
-                    });
-                    if(res.ok) {
-                      setTurnosConfig(newConfig);
-                      showFlashNotification('Regla agregada correctamente.');
-                      e.target.reset();
-                    } else {
-                      setError('Error al guardar regla');
-                    }
-                  } catch (err) {
-                    setError('Error de conexión');
-                  } finally {
-                    setLoading(false);
-                  }
-                }}>
-                  <div className="form-group">
-                    <label>Nombre del Turno y Hora</label>
-                    <input type="text" name="nombre" className="form-control" placeholder="Ej: Turno 1 - 12:00hs" required />
-                  </div>
-                  <div className="form-group">
-                    <label>Niveles (separados por coma)</label>
-                    <input type="text" name="niveles" className="form-control" placeholder="Ej: Nivel 6, Nivel 7" />
-                    <small style={{ color: 'var(--text-muted)' }}>Dejar en blanco para todos los niveles.</small>
-                  </div>
-                  <div className="form-group">
-                    <label>Categorías (separadas por coma)</label>
-                    <input type="text" name="categorias" className="form-control" placeholder="Ej: Juvenil, Mayor" />
-                    <small style={{ color: 'var(--text-muted)' }}>Dejar en blanco para todas las categorías.</small>
-                  </div>
-                  <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '10px' }} disabled={loading}>
-                    <Plus size={18} /> Agregar Regla
-                  </button>
-                </form>
-              </div>
 
-              {/* Lista de reglas y ejecución */}
-              <div style={{ flex: '2 1 400px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <div style={{ background: 'var(--bg-panel)', padding: '20px', borderRadius: '12px', border: '1px solid var(--border-color)', flex: 1 }}>
-                  <h3 style={{ fontSize: '1.1rem', marginBottom: '16px', color: 'var(--text-primary)' }}>Reglas Definidas</h3>
-                  {turnosConfig.length === 0 ? (
-                    <p style={{ color: 'var(--text-muted)' }}>No hay reglas definidas.</p>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      {turnosConfig.map((rule, idx) => (
-                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-card)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', flexWrap: 'wrap', gap: '10px' }}>
-                          <div>
-                            <strong style={{ color: 'var(--accent-primary)', display: 'block' }}>{rule.nombre}</strong>
-                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                              <span style={{ marginRight: '12px' }}><strong>Niveles:</strong> {rule.niveles.length ? rule.niveles.join(', ') : 'Todos'}</span>
-                              <span><strong>Categorías:</strong> {rule.categorias.length ? rule.categorias.join(', ') : 'Todas'}</span>
-                            </div>
-                          </div>
-                          <button 
-                            className="btn-icon" 
-                            style={{ color: 'var(--danger-color)', padding: '8px' }}
-                            onClick={async () => {
-                              if(!window.confirm('¿Eliminar esta regla?')) return;
-                              const newConfig = turnosConfig.filter((_, i) => i !== idx);
-                              try {
-                                setLoading(true);
-                                const res = await fetch(`${apiBase}/tournaments/${auth.tournamentId}/turnos-config`, {
-                                  method: 'PUT',
-                                  headers: { 'Content-Type': 'application/json', 'x-admin-pin': auth.pin },
-                                  body: JSON.stringify({ turnosConfig: newConfig })
-                                });
-                                if(res.ok) {
-                                  setTurnosConfig(newConfig);
-                                  showFlashNotification('Regla eliminada.');
-                                }
-                              } finally {
-                                setLoading(false);
-                              }
-                            }}
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
 
-                <div style={{ background: 'rgba(59, 130, 246, 0.1)', padding: '20px', borderRadius: '12px', border: '1px solid var(--accent-primary)' }}>
-                  <h3 style={{ fontSize: '1.1rem', marginBottom: '8px', color: 'var(--text-primary)' }}>Aplicar Asignación</h3>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '16px' }}>
-                    Esta acción asignará el turno correspondiente a todas las gimnastas cargadas basándose en las reglas (de arriba hacia abajo). Las gimnastas que no coincidan mantendrán su turno actual.
-                  </p>
-                  <button 
-                    className="btn btn-primary" 
-                    style={{ width: '100%' }}
-                    disabled={loading || turnosConfig.length === 0}
-                    onClick={async () => {
-                      if(!window.confirm('¿Estás seguro de reasignar los turnos automáticamente a las gimnastas cargadas?')) return;
-                      try {
-                        setLoading(true);
-                        const res = await fetch(`${apiBase}/tournaments/${auth.tournamentId}/auto-assign-turnos`, {
-                          method: 'POST',
-                          headers: { 'x-admin-pin': auth.pin }
-                        });
-                        const data = await res.json();
-                        if(res.ok) {
-                          showFlashNotification(`¡Éxito! Se actualizaron ${data.updatedCount} gimnastas.`);
-                          fetchTournamentData(); // Recargar datos locales
-                        } else {
-                          setError(data.error || 'Error al asignar turnos');
-                        }
-                      } catch (err) {
-                        setError('Error de conexión');
-                      } finally {
-                        setLoading(false);
-                      }
-                    }}
-                  >
-                    <Layers size={18} /> Ejecutar Asignación Automática
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* FLASH SCORE NOTIFICATIONS EN CÓMPUTOS */}
-      <div style={{
-        position: 'fixed',
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '20px',
-        zIndex: 9999,
-        pointerEvents: 'none',
-        alignItems: 'center'
-      }}>
-        {scoreNotifications.map(notif => (
-          <div key={notif.id} className="fade-in" style={{
-            background: 'rgba(11, 18, 38, 0.95)',
-            color: 'white',
-            padding: '40px 60px',
-            borderRadius: '24px',
-            boxShadow: '0 25px 50px rgba(0,0,0,0.6)',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minWidth: '400px',
-            border: '3px solid var(--accent-primary)',
-            backdropFilter: 'blur(15px)'
-          }}>
-            <span style={{ fontSize: '2rem', fontWeight: 'bold', textTransform: 'uppercase', textAlign: 'center', color: 'var(--text-primary)' }}>
-              {notif.gymnastName}
-            </span>
-            <span style={{ fontSize: '5rem', fontWeight: '900', marginTop: '15px', color: 'var(--accent-primary)', textShadow: '0 0 25px rgba(59, 130, 246, 0.6)' }}>
-              {notif.score !== undefined && notif.score !== null ? notif.score.toFixed(3) : '-'}
-            </span>
-          </div>
-        ))}
-      </div>
 
     </div>
   );

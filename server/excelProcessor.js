@@ -61,14 +61,23 @@ const formatBirthdate = (value) => {
 /**
  * Procesa un archivo Excel cargado y retorna la lista de gimnastas normalizada.
  */
-export const importGimnastasFromExcel = (buffer) => {
+export const importGimnastasFromExcel = (buffer, filename = '') => {
   const workbook = XLSX.read(buffer, { type: 'buffer' });
   const sheetName = workbook.SheetNames[0];
   const worksheet = workbook.Sheets[sheetName];
   const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
 
   if (rawData.length === 0) {
-    throw new Error('El archivo Excel está vacío.');
+    throw new Error(`El archivo Excel ${filename || ''} está vacío.`);
+  }
+
+  // Inferir sexo por defecto desde el nombre del archivo si es posible
+  let defaultSexo = '';
+  const fname = filename.toUpperCase();
+  if (fname.includes('GAM') || fname.includes('MASC') || fname.includes('VARON')) {
+    defaultSexo = 'GAM';
+  } else if (fname.includes('GAF') || fname.includes('FEM') || fname.includes('MUJER')) {
+    defaultSexo = 'GAF';
   }
 
   // Normalizar encabezados a mayúsculas y limpiar espacios
@@ -112,7 +121,7 @@ export const importGimnastasFromExcel = (buffer) => {
       institucion: colIdx.institucion !== -1 && row[colIdx.institucion] ? String(row[colIdx.institucion]).trim() : 'Independiente',
       categoria: colIdx.categoria !== -1 && row[colIdx.categoria] ? String(row[colIdx.categoria]).trim() : 'Única',
       nivel: colIdx.nivel !== -1 && row[colIdx.nivel] ? String(row[colIdx.nivel]).trim() : 'Nivel 1',
-      sexo: colIdx.sexo !== -1 && row[colIdx.sexo] ? String(row[colIdx.sexo]).trim().toUpperCase() : '',
+      sexo: colIdx.sexo !== -1 && row[colIdx.sexo] ? String(row[colIdx.sexo]).trim().toUpperCase() : defaultSexo,
       grupo: 'Turno 1', // Grupo/Turno inicial por defecto
       notas: {} // Inicialmente vacío
     };

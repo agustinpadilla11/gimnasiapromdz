@@ -227,16 +227,21 @@ app.get('/api/tournaments/:tournamentId', requireAuth, (req, res) => {
 });
 
 // 6. Importar gimnastas desde Excel
-app.post('/api/tournaments/:tournamentId/import', requireAdmin, upload.single('file'), async (req, res) => {
+app.post('/api/tournaments/:tournamentId/import', requireAdmin, upload.array('files'), async (req, res) => {
   const { tournamentId } = req.params;
   const { turno, niveles } = req.body;
   
-  if (!req.file) {
-    return res.status(400).json({ error: 'No se subió ningún archivo' });
+  if (!req.files || req.files.length === 0) {
+    return res.status(400).json({ error: 'No se subieron archivos' });
   }
 
   try {
-    const nuevasGimnastas = importGimnastasFromExcel(req.file.buffer);
+    let nuevasGimnastas = [];
+    for (const file of req.files) {
+      const gims = importGimnastasFromExcel(file.buffer, file.originalname);
+      nuevasGimnastas = nuevasGimnastas.concat(gims);
+    }
+    
     const tData = req.tournament;
 
     if (turno) {
@@ -249,8 +254,7 @@ app.post('/api/tournaments/:tournamentId/import', requireAdmin, upload.single('f
       const filtradas = (tData.gimnastas || []).filter(g => g.grupo !== turno);
       tData.gimnastas = [...filtradas, ...nuevasGimnastas];
     } else {
-      // Reemplazo total (comportamiento anterior)
-      tData.gimnastas = nuevasGimnastas;
+      tData.gimnastas = [...(tData.gimnastas || []), ...nuevasGimnastas];
     }
 
     await saveTournamentData(tournamentId, tData);

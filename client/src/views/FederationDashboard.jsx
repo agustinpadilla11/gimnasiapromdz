@@ -40,8 +40,8 @@ export default function FederationDashboard({ apiBase, auth, onLoginSuccess, onL
 
   const handleCreateTournament = async (e) => {
     e.preventDefault();
-    if (!newId || !newNombre) {
-      setError('Completa el ID y Nombre del torneo.');
+    if (!newNombre) {
+      setError('Completa el Nombre del torneo.');
       return;
     }
 
@@ -49,7 +49,8 @@ export default function FederationDashboard({ apiBase, auth, onLoginSuccess, onL
     setSuccess('');
     setLoading(true);
 
-    const sanitizedId = newId.toLowerCase().trim().replace(/[^a-z0-9-_]/g, '-');
+    const generatedId = newNombre.toLowerCase().trim().replace(/[^a-z0-9-_]/g, '-');
+    const finalId = generatedId ? `${generatedId}-${Date.now().toString().slice(-4)}` : `torneo-${Date.now()}`;
 
     try {
       const res = await fetch(`${apiBase}/tournaments`, {
@@ -59,10 +60,10 @@ export default function FederationDashboard({ apiBase, auth, onLoginSuccess, onL
           'x-user-role': auth.federativeRole || auth.role
         },
         body: JSON.stringify({
-          id: sanitizedId,
+          id: finalId,
           nombre: newNombre,
           modalidad: newModalidad,
-          adminPin: newAdminPin,
+          adminPin: newAdminPin, // still uses default 1111 which is fine
           juezPin: newJuezPin,
           juezPinGam: newModalidad === 'Ambos' ? newJuezPinGam : undefined
         })
@@ -227,19 +228,8 @@ export default function FederationDashboard({ apiBase, auth, onLoginSuccess, onL
         <div className="glass-panel animate-fade-in" style={{ padding: '30px', marginBottom: '30px', background: 'var(--bg-card)' }}>
           <h2 style={{ fontSize: '1.2rem', marginBottom: '20px', color: 'var(--text-primary)' }}>Crear Nuevo Torneo</h2>
           <form onSubmit={handleCreateTournament} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label>ID del Torneo (Corto, sin espacios)</label>
-              <input
-                type="text"
-                placeholder="ej: torneo-federativo-2026"
-                className="input-field"
-                value={newId}
-                onChange={(e) => setNewId(e.target.value)}
-                required
-              />
-            </div>
-
-            <div className="form-group" style={{ marginBottom: 0 }}>
+            
+            <div className="form-group" style={{ marginBottom: 0, gridColumn: 'span 2' }}>
               <label>Nombre Completo del Torneo</label>
               <input
                 type="text"
@@ -251,7 +241,7 @@ export default function FederationDashboard({ apiBase, auth, onLoginSuccess, onL
               />
             </div>
 
-            <div className="form-group" style={{ marginBottom: 0 }}>
+            <div className="form-group" style={{ marginBottom: 0, gridColumn: 'span 2' }}>
               <label>Modalidad / Rama</label>
               <select
                 value={newModalidad}
@@ -265,21 +255,9 @@ export default function FederationDashboard({ apiBase, auth, onLoginSuccess, onL
               </select>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: newModalidad === 'Ambos' ? '1fr 1fr 1fr' : '1fr 1fr', gap: '15px', gridColumn: 'span 2' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: newModalidad === 'Ambos' ? '1fr 1fr' : '1fr', gap: '15px', gridColumn: 'span 2' }}>
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>PIN Cómputos</label>
-                <input
-                  type="password"
-                  maxLength={6}
-                  className="input-field"
-                  value={newAdminPin}
-                  onChange={(e) => setNewAdminPin(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>{newModalidad === 'Ambos' ? 'PIN Jueces GAF' : 'PIN Jueces'}</label>
+                <label>{newModalidad === 'Ambos' ? 'PIN Jueces GAF (Femenina)' : 'PIN Jueces'}</label>
                 <input
                   type="password"
                   maxLength={6}
@@ -292,7 +270,7 @@ export default function FederationDashboard({ apiBase, auth, onLoginSuccess, onL
               
               {newModalidad === 'Ambos' && (
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label>PIN Jueces GAM</label>
+                  <label>PIN Jueces GAM (Masculina)</label>
                   <input
                     type="password"
                     maxLength={6}

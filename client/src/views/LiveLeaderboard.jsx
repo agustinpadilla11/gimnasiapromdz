@@ -58,7 +58,10 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
 
   const groupedRankings = {};
   filteredGymnastsByTurno.forEach(g => {
-    const formatStr = (str) => str ? str.trim().toLowerCase().replace(/\b\w/g, l => l.toUpperCase()) : '';
+    const formatStr = (str) => {
+      if (!str) return '';
+      return str.trim().toLowerCase().split(/\s+/).map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+    };
     const nivelFmt = formatStr(g.nivel);
     const catFmt = formatStr(g.categoria);
     const key = g.nacimiento ? `${nivelFmt} - ${catFmt} ${g.nacimiento}` : `${nivelFmt} - ${catFmt}`;
