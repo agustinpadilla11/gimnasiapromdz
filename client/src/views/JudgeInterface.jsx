@@ -12,6 +12,13 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGymnast, setSelectedGymnast] = useState(null);
   
+  // Nuevos estados para configuración de juez
+  const [judgeRole, setJudgeRole] = useState('Juez 1');
+  const [isLider, setIsLider] = useState(false);
+  const [setupComplete, setSetupComplete] = useState(false);
+  
+  // Estado para el buffer (semáforo) de los jueces
+  const [scoreBuffer, setScoreBuffer] = useState({});
   // Extraer valores únicos para los filtros basados en la lista de gimnastas
   const turnos = [...new Set(gymnasts.map(g => g.grupo || 'Turno 1'))].sort();
   const niveles = ['Todos', ...new Set(gymnasts.map(g => g.nivel))].sort();
@@ -133,6 +140,10 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
           if (msg.aparato === selectedApparatus) {
             setLastScore({ gymnast: msg.gymnast, aparato: msg.aparato, score: msg.score });
           }
+        } else if (msg.type === 'BUFFER_UPDATED') {
+          if (msg.aparato === selectedApparatus && selectedGymnast && msg.gymnastId === selectedGymnast.id) {
+            setScoreBuffer(msg.buffer || {});
+          }
         }
       } catch (e) {
         console.error(e);
@@ -143,7 +154,7 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
       ws.close();
       wsRef.current = null;
     };
-  }, [apiBase, wsBase, auth.tournamentId, selectedApparatus]);
+  }, [apiBase, wsBase, auth.tournamentId, selectedApparatus, selectedGymnast]);
 
   // Escuchar teclado físico para ingresar deducciones en caliente
   useEffect(() => {
@@ -209,6 +220,75 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
     );
   }
 
+  if (!setupComplete) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', padding: '20px' }}>
+        <div className="glass-panel" style={{ width: '100%', maxWidth: '400px', padding: '30px' }}>
+          <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>Configuración de Juez</h2>
+          
+          <div className="form-group" style={{ marginBottom: '15px' }}>
+            <label>Aparato</label>
+            <select
+              className="input-field"
+              value={selectedApparatus}
+              onChange={(e) => setSelectedApparatus(e.target.value)}
+            >
+              <option value="">Selecciona un aparato</option>
+              {tournament.aparatos.filter(ap => {
+                if (tournament.modalidad !== 'Ambos') return true;
+                if (activeModalidad === 'GAM') return ap.includes('(M)') || ['Arzones', 'Anillas', 'Barra Fija'].includes(ap);
+                return ap.includes('(F)') || ['Paralelas Asim.', 'Viga'].includes(ap);
+              }).map(ap => (
+                <option key={ap} value={ap}>{ap}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group" style={{ marginBottom: '15px' }}>
+            <label>Rol del Juez</label>
+            <select
+              className="input-field"
+              value={judgeRole}
+              onChange={(e) => setJudgeRole(e.target.value)}
+            >
+              {[1, 2, 3, 4, 5, 6].map(n => (
+                <option key={n} value={`Juez ${n}`}>Juez {n}</option>
+              ))}
+            </select>
+          </div>
+
+          {activeModalidad !== 'GAM' && (
+            <div className="form-group" style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={isLider}
+                  onChange={(e) => setIsLider(e.target.checked)}
+                />
+                {tournament.configuracion?.tipoCalculo === 'base 10' 
+                  ? 'Soy Jueza Principal' 
+                  : tournament.configuracion?.tipoCalculo === 'Nota D' 
+                    ? 'Soy Juez D' 
+                    : 'Soy Jueza Principal / Juez D'}
+              </label>
+            </div>
+          )}
+
+          <button
+            className="btn btn-primary"
+            style={{ width: '100%', padding: '12px' }}
+            disabled={!selectedApparatus}
+            onClick={() => {
+              setSetupComplete(true);
+            }}
+          >
+            Ingresar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // Filtrar gimnastas
   const filteredGymnasts = gymnasts.filter(g => {
     // Si es Nivel 1B, solo compite en Salto y Suelo
@@ -240,6 +320,7 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
     setMessage('');
     setSubmittedSuccess(false);
     setLastSubmittedScore(null);
+    setScoreBuffer({});
     
     // Cargar nota si ya existe una registrada
     const notaExistente = gymnast.notas?.[selectedApparatus];
@@ -330,18 +411,58 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
   const handleSubmitScore = async () => {
     if (!selectedGymnast) return;
     
-    // Asegurar que hay al menos una nota ingresada
-    const activeVals = juezDeductions.slice(0, numJueces).filter(v => v !== '');
-    if (activeVals.length === 0) {
-      setMessage('Por favor, ingresa al menos una nota de juez.');
+    if (!isLider) {
+      const notaIndividual = juezDeductions[0] !== '' ? parseFloat(juezDeductions[0]) : null;
+      if (notaIndividual === null) {
+        setMessage('Por favor, ingresa tu nota.');
+        return;
+      }
+
+      setSubmitting(true);
+      setMessage('');
+
+      try {
+        const res = await fetch(`${apiBase}/tournaments/${auth.tournamentId}/juez-nota-individual`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-juez-pin': auth.pin,
+            'x-admin-pin': auth.pin
+          },
+          body: JSON.stringify({
+            gymnastId: selectedGymnast.id,
+            aparato: selectedApparatus,
+            juezRol: judgeRole,
+            nota: notaIndividual
+          })
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          setMessage('¡Nota enviada al líder!');
+          setSubmittedSuccess(true);
+          setLastSubmittedScore({ gymnast: selectedGymnast, score: { final: notaIndividual } });
+        } else {
+          setMessage(`Error: ${data.error}`);
+        }
+      } catch (err) {
+        setMessage('Error de conexión al enviar puntuación.');
+      } finally {
+        setSubmitting(false);
+      }
       return;
     }
+
+    // Es Líder - Calcula y envía la nota final
+    // En lugar de leer de juezDeductions, las notas de los demás vienen del buffer.
+    // El líder también puede ingresar su propia nota si es uno de los jueces (ej. Juez 1)
+    const juezNota = juezDeductions[0] !== '' ? parseFloat(juezDeductions[0]) : null;
 
     setSubmitting(true);
     setMessage('');
 
     try {
-      const res = await fetch(`${apiBase}/tournaments/${auth.tournamentId}/score`, {
+      const res = await fetch(`${apiBase}/tournaments/${auth.tournamentId}/calcular-nota-final`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -351,9 +472,10 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
         body: JSON.stringify({
           gymnastId: selectedGymnast.id,
           aparato: selectedApparatus,
-          jueces: juezDeductions.slice(0, numJueces).map(v => v === '' ? null : parseFloat(v)),
           notaD: notaD === '' ? 0 : parseFloat(notaD),
           dtos: mesaDeduction,
+          liderNota: juezNota,
+          liderRol: judgeRole,
           baseScore: getBaseScoreForGymnast(selectedGymnast)
         })
       });
@@ -363,18 +485,19 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
         setMessage('');
         setLastSubmittedScore({
           gymnast: selectedGymnast,
-          score: data.score || scoreCalc
+          score: data.score
         });
         setSubmittedSuccess(true);
+        setScoreBuffer({});
         
-        // Actualizar la lista local de gimnastas inmediatamente para marcarla en verde y pasarla a Calificados
+        // Actualizar la lista local de gimnastas
         setGymnasts(prev => prev.map(g => {
           if (g.id === selectedGymnast.id) {
             return {
               ...g,
               notas: {
                 ...g.notas,
-                [selectedApparatus]: data.score || scoreCalc
+                [selectedApparatus]: data.score
               }
             };
           }
@@ -384,7 +507,7 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
         setMessage(`Error: ${data.error}`);
       }
     } catch (err) {
-      setMessage('Error de conexión al enviar puntuación.');
+      setMessage('Error de conexión al calcular nota final.');
     } finally {
       setSubmitting(false);
     }
@@ -850,101 +973,122 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
                 )}
               </div>
 
-              {/* Selector de número de jueces en mesa */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
-                <span style={{ fontSize: '0.9rem', fontWeight: '500', color: 'var(--text-secondary)' }}>
-                  Cantidad de Jueces en Mesa:
-                </span>
-                <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
-                  {[1, 2, 3, 4, 5, 6].map(n => (
-                    <button
-                      key={n}
-                      type="button"
-                      onClick={() => {
-                        setNumJueces(n);
-                        if (currentInputIdx >= n) {
-                          setCurrentInputIdx(n - 1);
-                        }
-                      }}
-                      className="btn"
+              {/* INTERFAZ DEL JUEZ LÍDER O INDIVIDUAL */}
+              {isLider ? (
+                <>
+                  <div style={{ marginBottom: '25px' }}>
+                    <div
+                      onClick={() => setCurrentInputIdx(0)}
                       style={{
-                        padding: '6px 14px',
-                        background: numJueces === n ? 'var(--accent-primary)' : 'rgba(255,255,255,0.03)',
-                        borderColor: numJueces === n ? 'var(--accent-primary)' : 'var(--border-color)',
-                        color: numJueces === n ? '#fff' : 'var(--text-primary)',
-                        borderRadius: '6px'
+                        background: 'var(--bg-input)',
+                        border: `2px solid ${currentInputIdx === 0 ? 'var(--accent-primary)' : 'var(--border-color)'}`,
+                        borderRadius: '12px',
+                        padding: '20px',
+                        textAlign: 'center',
+                        cursor: 'pointer',
+                        boxShadow: currentInputIdx === 0 ? 'var(--shadow-glow)' : 'none',
+                        transition: 'all 0.2s ease'
                       }}
                     >
-                      {n}
-                    </button>
-                  ))}
-                </div>
-              </div>
+                      <div style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '5px' }}>
+                        Mi Nota ({judgeRole})
+                      </div>
+                      <div style={{
+                        fontSize: '2.5rem',
+                        fontFamily: 'var(--font-mono)',
+                        fontWeight: '700',
+                        minHeight: '50px',
+                        color: juezDeductions[0] !== '' 
+                          ? (activeModalidad === 'GAM' ? 'var(--accent-success)' : 'var(--accent-danger)') 
+                          : 'var(--text-muted)'
+                      }}>
+                        {juezDeductions[0] !== '' ? juezDeductions[0] : '-'}
+                      </div>
+                    </div>
+                  </div>
 
-              {/* Cajas de entrada de notas de Jueces */}
-              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${numJueces}, 1fr)`, gap: '15px', marginBottom: '25px' }}>
-                {Array.from({ length: numJueces }).map((_, idx) => (
+                  <div style={{ padding: '15px', background: 'var(--bg-panel)', borderRadius: '12px', border: '1px solid var(--border-color)', marginBottom: '20px' }}>
+                    <h4 style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '10px' }}>Semáforo de Jueces</h4>
+                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                      {['Juez 1', 'Juez 2', 'Juez 3', 'Juez 4', 'Juez 5', 'Juez 6'].map((j, idx) => {
+                        if (j === judgeRole) return null; // Omitir el propio rol del líder
+                        const submitted = scoreBuffer && scoreBuffer[j] !== undefined;
+                        return (
+                          <div key={j} style={{
+                            padding: '8px 12px',
+                            borderRadius: '8px',
+                            background: submitted ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                            border: `1px solid ${submitted ? 'var(--accent-success)' : 'var(--border-color)'}`,
+                            color: submitted ? 'var(--accent-success)' : 'var(--text-muted)'
+                          }}>
+                            {j}: {submitted ? scoreBuffer[j].nota : 'Pendiente'}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {activeModalidad !== 'GAM' && (
+                    <div 
+                      onClick={() => setCurrentInputIdx('D')}
+                      style={{ 
+                        background: 'var(--bg-input)', 
+                        padding: '15px', 
+                        borderRadius: '12px', 
+                        border: `2px solid ${currentInputIdx === 'D' ? 'var(--accent-primary)' : 'var(--border-color)'}`,
+                        boxShadow: currentInputIdx === 'D' ? 'var(--shadow-glow)' : 'none',
+                        marginBottom: '20px',
+                        transition: 'all 0.2s ease',
+                        cursor: 'pointer'
+                      }}>
+                      <h4 style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '10px', fontWeight: '600', textAlign: 'center' }}>
+                        Nota D (Dificultad)
+                      </h4>
+                      <div style={{
+                        fontSize: '1.8rem',
+                        fontFamily: 'var(--font-mono)',
+                        fontWeight: '700',
+                        minHeight: '40px',
+                        color: notaD !== '' ? 'var(--accent-primary)' : 'var(--text-muted)',
+                        textAlign: 'center'
+                      }}>
+                        {notaD !== '' ? notaD : '-'}
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div style={{ marginBottom: '25px' }}>
                   <div
-                    key={idx}
-                    onClick={() => setCurrentInputIdx(idx)}
+                    onClick={() => setCurrentInputIdx(0)}
                     style={{
                       background: 'var(--bg-input)',
-                      border: `2px solid ${currentInputIdx === idx ? 'var(--accent-primary)' : 'var(--border-color)'}`,
+                      border: `2px solid ${currentInputIdx === 0 ? 'var(--accent-primary)' : 'var(--border-color)'}`,
                       borderRadius: '12px',
-                      padding: '12px',
+                      padding: '20px',
                       textAlign: 'center',
                       cursor: 'pointer',
-                      boxShadow: currentInputIdx === idx ? 'var(--shadow-glow)' : 'none',
+                      boxShadow: currentInputIdx === 0 ? 'var(--shadow-glow)' : 'none',
                       transition: 'all 0.2s ease'
                     }}
                   >
-                    <div style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '5px' }}>
-                      Juez {idx + 1}
+                    <div style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '5px' }}>
+                      Mi Nota ({judgeRole})
                     </div>
                     <div style={{
-                      fontSize: '1.8rem',
+                      fontSize: '2.5rem',
                       fontFamily: 'var(--font-mono)',
                       fontWeight: '700',
-                      minHeight: '40px',
-                      color: juezDeductions[idx] !== '' 
+                      minHeight: '50px',
+                      color: juezDeductions[0] !== '' 
                         ? (activeModalidad === 'GAM' ? 'var(--accent-success)' : 'var(--accent-danger)') 
                         : 'var(--text-muted)'
                     }}>
-                      {juezDeductions[idx] !== '' ? juezDeductions[idx] : '-'}
+                      {juezDeductions[0] !== '' ? juezDeductions[0] : '-'}
                     </div>
                   </div>
-                ))}
-               </div>
-
-               {/* NOTA DIFICULTAD (D) - Solo para GAF */}
-               {activeModalidad !== 'GAM' && (
-                 <div 
-                   onClick={() => setCurrentInputIdx('D')}
-                 style={{ 
-                   background: 'var(--bg-input)', 
-                   padding: '15px', 
-                   borderRadius: '12px', 
-                   border: `2px solid ${currentInputIdx === 'D' ? 'var(--accent-primary)' : 'var(--border-color)'}`,
-                   boxShadow: currentInputIdx === 'D' ? 'var(--shadow-glow)' : 'none',
-                   marginBottom: '20px',
-                   transition: 'all 0.2s ease',
-                   cursor: 'pointer'
-                 }}>
-                 <h4 style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '10px', fontWeight: '600', textAlign: 'center' }}>
-                   Nota D (Dificultad)
-                 </h4>
-                 <div style={{
-                   fontSize: '1.8rem',
-                   fontFamily: 'var(--font-mono)',
-                   fontWeight: '700',
-                   minHeight: '40px',
-                   color: notaD !== '' ? 'var(--accent-primary)' : 'var(--text-muted)',
-                   textAlign: 'center'
-                 }}>
-                   {notaD !== '' ? notaD : '-'}
-                 </div>
                 </div>
-               )}
+              )}
 
                <div style={{ 
                  display: 'grid', 
@@ -1000,7 +1144,7 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
                    >
                      Borrar dígito
                   </button>
-                  {activeModalidad !== 'GAM' ? (
+                  {activeModalidad !== 'GAM' && isLider ? (
                     /* ATAJOS RÁPIDOS DE DEDUCCIÓN (DESCUENTOS DE MESA) */
                     <div>
                       <h4 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '8px', fontWeight: '600' }}>
@@ -1055,7 +1199,7 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
                       </button>
                     </div>
                   ) : (
-                    /* Para GAM, botón simple para limpiar */
+                    /* Para GAM o jueces individuales, botón simple para limpiar */
                     <button
                       type="button"
                       onClick={() => {
@@ -1066,13 +1210,14 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
                       style={{ width: '100%', marginTop: '16px', gap: '8px', fontSize: '0.85rem' }}
                     >
                       <RotateCcw size={14} />
-                      Limpiar notas
+                      Limpiar nota
                     </button>
                   )}
                  </div>
                </div>
 
               {/* PANEL DE RESULTADOS / FÓRMULA */}
+              {isLider && (
               <div className="glass-panel" style={{
                 marginTop: '25px',
                 padding: '16px',
@@ -1130,6 +1275,7 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
                   </span>
                 </div>
               </div>
+              )}
 
               {message && (
                 <div style={{

@@ -15,6 +15,10 @@ export default function FederationDashboard({ apiBase, auth, onLoginSuccess, onL
   const [newAdminPin, setNewAdminPin] = useState('1111');
   const [newJuezPin, setNewJuezPin] = useState('5555');
   const [newJuezPinGam, setNewJuezPinGam] = useState('6666');
+  
+  // Opciones adicionales
+  const [newTipoCalculo, setNewTipoCalculo] = useState('base 10');
+  const [newPremios, setNewPremios] = useState({ equipos: true, aparatos: true, allAround: true });
 
   const fetchTournaments = async () => {
     try {
@@ -63,9 +67,13 @@ export default function FederationDashboard({ apiBase, auth, onLoginSuccess, onL
           id: finalId,
           nombre: newNombre,
           modalidad: newModalidad,
-          adminPin: newAdminPin, // still uses default 1111 which is fine
+          adminPin: newAdminPin,
           juezPin: newJuezPin,
-          juezPinGam: newModalidad === 'Ambos' ? newJuezPinGam : undefined
+          juezPinGam: newModalidad === 'Ambos' ? newJuezPinGam : undefined,
+          opciones: {
+            tipoCalculo: newTipoCalculo,
+            premios: newPremios
+          }
         })
       });
 
@@ -75,6 +83,8 @@ export default function FederationDashboard({ apiBase, auth, onLoginSuccess, onL
         setShowCreateForm(false);
         setNewId('');
         setNewNombre('');
+        setNewTipoCalculo('base 10');
+        setNewPremios({ equipos: true, aparatos: true, allAround: true });
         fetchTournaments();
       } else {
         setError(data.error || 'No se pudo crear el torneo.');
@@ -281,6 +291,38 @@ export default function FederationDashboard({ apiBase, auth, onLoginSuccess, onL
                   />
                 </div>
               )}
+            </div>
+
+            <div className="form-group" style={{ marginBottom: 0, gridColumn: 'span 2' }}>
+              <label>Tipo de Cálculo (GAM/GAF)</label>
+              <select
+                value={newTipoCalculo}
+                onChange={(e) => setNewTipoCalculo(e.target.value)}
+                className="input-field"
+                style={{ cursor: 'pointer' }}
+              >
+                <option value="base 10">Base 10</option>
+                <option value="Nota D">Nota D</option>
+                <option value="Ambas">Ambas</option>
+              </select>
+            </div>
+            
+            <div className="form-group" style={{ marginBottom: 0, gridColumn: 'span 2' }}>
+              <label>Premios a Entregar</label>
+              <div style={{ display: 'flex', gap: '15px', marginTop: '10px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <input type="checkbox" checked={newPremios.equipos} onChange={(e) => setNewPremios({...newPremios, equipos: e.target.checked})} />
+                  Equipos
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <input type="checkbox" checked={newPremios.aparatos} onChange={(e) => setNewPremios({...newPremios, aparatos: e.target.checked})} />
+                  Aparatos
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <input type="checkbox" checked={newPremios.allAround} onChange={(e) => setNewPremios({...newPremios, allAround: e.target.checked})} />
+                  All Around
+                </label>
+              </div>
             </div>
 
             <div style={{ gridColumn: 'span 2', display: 'flex', gap: '12px', marginTop: '10px' }}>

@@ -285,22 +285,29 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
           // 1. Actualizar el listado en local
           setGymnasts(prev => prev.map(g => g.id === msg.gymnast.id ? msg.gymnast : g));
           
-          // Solo proyectar automáticamente si NO estamos en una pantalla dedicada de juez
-          if (!urlApparatus) {
+          const isGlobalScreen = !urlApparatus;
+          const isMatchingApparatus = urlApparatus && msg.aparato === urlApparatus;
+
+          if (isGlobalScreen || isMatchingApparatus) {
             setLastProjected({ gymnast: msg.gymnast, aparato: msg.aparato, score: msg.score });
             
-            // Cola de notificaciones flash automáticas (5 segundos)
-            const newNotif = {
-              id: Date.now() + Math.random(),
-              gymnastName: msg.gymnast.nombre,
-              score: msg.score.final,
-              aparato: msg.aparato
-            };
-            setScoreNotifications(prev => [...prev, newNotif]);
-            
-            setTimeout(() => {
-              setScoreNotifications(prev => prev.filter(n => n.id !== newNotif.id));
-            }, 10000);
+            // Si es pantalla dedicada, mostramos el dramatic reveal. Si es global, mostramos el flash note (toast gigante)
+            if (isMatchingApparatus) {
+              setProjectionMode('ultima');
+              triggerReveal(msg.gymnast, msg.aparato, msg.score);
+            } else {
+              const newNotif = {
+                id: Date.now() + Math.random(),
+                gymnastName: msg.gymnast.nombre,
+                score: msg.score.final,
+                aparato: msg.aparato
+              };
+              setScoreNotifications(prev => [...prev, newNotif]);
+              
+              setTimeout(() => {
+                setScoreNotifications(prev => prev.filter(n => n.id !== newNotif.id));
+              }, 10000);
+            }
           }
         } else if (msg.type === 'PROJECT_SCORE') {
           // Si estamos en una pantalla de juez y el aparato no coincide, ignorar la proyección del administrador

@@ -39,7 +39,7 @@ export const getTournaments = async () => {
   }
 };
 
-export const createTournament = async (id, nombre, modalidad, adminPin = '1111', juezPin = '5555', juezPinGam = '6666') => {
+export const createTournament = async (id, nombre, modalidad, adminPin = '1111', juezPin = '5555', juezPinGam = '6666', opciones = {}) => {
   const { data: existing } = await supabase.from('tournaments').select('id').eq('id', id).maybeSingle();
   if (existing) {
     throw new Error('El ID de torneo ya existe');
@@ -55,6 +55,25 @@ export const createTournament = async (id, nombre, modalidad, adminPin = '1111',
     aparatos = ['Salto (F)', 'Paralelas Asim.', 'Viga', 'Suelo (F)', 'Suelo (M)', 'Arzones', 'Anillas', 'Salto (M)', 'Paralelas (M)', 'Barra Fija'];
   }
 
+  // Opciones por defecto si no vienen
+  const defaultOpcionesGAM = {
+    sistemaPuntuacion: 'Directa',
+    premioEquipos: true,
+    premioAparatos: true,
+    premioAllAround: true
+  };
+
+  const defaultOpcionesGAF = {
+    sistemaPuntuacion: 'Ambas',
+    premioEquipos: false,
+    premioAparatos: false,
+    premioAllAround: true
+  };
+
+  const configFinal = modalidad === 'GAM' ? { ...defaultOpcionesGAM, ...opciones } :
+                      modalidad === 'GAF' ? { ...defaultOpcionesGAF, ...opciones } :
+                      { ...defaultOpcionesGAF, ...opciones };
+
   const nuevoTorneoInfo = {
     id,
     nombre,
@@ -62,13 +81,15 @@ export const createTournament = async (id, nombre, modalidad, adminPin = '1111',
     adminPin,
     juezPin,
     juezPinGam: modalidad === 'Ambos' ? juezPinGam : undefined,
-    fechaCreacion: new Date().toISOString()
+    fechaCreacion: new Date().toISOString(),
+    configuracion: configFinal
   };
 
   const nuevoTorneoData = {
     ...nuevoTorneoInfo,
     aparatos,
-    gimnastas: []
+    gimnastas: [],
+    bufferNotas: {} // Aquí se guardarán las notas pendientes (por idGimnasta -> aparato -> juezX)
   };
 
   const { error } = await supabase.from('tournaments').insert([{ id, data: nuevoTorneoData }]);

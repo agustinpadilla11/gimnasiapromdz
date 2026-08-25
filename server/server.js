@@ -1,3 +1,6 @@
+import { Mutex } from 'async-mutex';
+const tournamentLocks = {};
+function getTournamentLock(id) { if (!tournamentLocks[id]) tournamentLocks[id] = new Mutex(); return tournamentLocks[id]; }
 import express from 'express';
 import { WebSocketServer } from 'ws';
 import cors from 'cors';
@@ -169,14 +172,22 @@ app.get('/api/tournaments', async (req, res) => {
 
 // 2. Crear un torneo nuevo (Requiere usuario de federación)
 app.post('/api/tournaments', requireFederacion, async (req, res) => {
-  const { id, nombre, modalidad, adminPin, juezPin, juezPinGam } = req.body;
+  const { id, nombre, modalidad, adminPin, juezPin, juezPinGam, opciones } = req.body;
 
   if (!id || !nombre || !modalidad) {
     return res.status(400).json({ error: 'Faltan campos obligatorios' });
   }
 
+  const finalAdminPin = adminPin || '1111';
+  const finalJuezPin = juezPin || '5555';
+  const finalJuezPinGam = juezPinGam || '6666';
+
+  if (finalAdminPin === finalJuezPin || (modalidad === 'Ambos' && finalAdminPin === finalJuezPinGam)) {
+    return res.status(400).json({ error: 'El PIN de Jueces no puede ser igual al PIN de Cómputos' });
+  }
+
   try {
-    const nuevoTorneo = await createTournament(id, nombre, modalidad, adminPin || '1111', juezPin || '5555', juezPinGam || '6666');
+    const nuevoTorneo = await createTournament(id, nombre, modalidad, finalAdminPin, finalJuezPin, finalJuezPinGam, opciones || {});
     res.status(201).json({ success: true, torneo: nuevoTorneo });
   } catch (e) {
     res.status(400).json({ error: e.message });
@@ -450,6 +461,195 @@ app.post('/api/tournaments/:tournamentId/score', async (req, res) => {
     res.json({ success: true, gymnast: tData.gimnastas[idx] });
   } catch (err) {
     res.status(500).json({ error: 'Error al procesar la nota' });
+  } finally {
+    release();
+  }
+});
+
+// 10.1 Recibir nota de un juez individual (al buffer)
+app.post('/api/tournaments/:tournamentId/juez-nota-individual', async (req, res) => {
+  const { tournamentId } = req.params;
+  const { gymnastId, aparato, juezRol, nota, notaD, dtos } = req.body;
+
+  if (!gymnastId || !aparato || !juezRol) {
+    return res.status(400).json({ error: 'Campos requeridos faltantes' });
+  }
+
+  const adminPinHeader = req.headers['x-admin-pin'];
+  const juezPinHeader = req.headers['x-juez-pin'];
+
+  const lock = getTournamentLock(tournamentId);
+  const release = await lock.acquire();
+
+  try {
+    const tData = await loadTournament(tournamentId);
+    const isAdmin = adminPinHeader === tData.adminPin;
+    const isJuez = (juezPinHeader === tData.juezPin) || (tData.juezPinGam && juezPinHeader === tData.juezPinGam);
+    
+    if (!isAdmin && !isJuez) {
+      return res.status(403).json({ error: 'PIN de acceso incorrecto para este torneo' });
+    }
+
+    if (!tData.bufferNotas) tData.bufferNotas = {};
+    if (!tData.bufferNotas[gymnastId]) tData.bufferNotas[gymnastId] = {};
+    if (!tData.bufferNotas[gymnastId][aparato]) tData.bufferNotas[gymnastId][aparato] = {};
+
+    // Guardar nota en el buffer
+    tData.bufferNotas[gymnastId][aparato][juezRol] = {
+      nota: nota !== undefined && nota !== '' ? parseFloat(nota) : null,
+      notaD: notaD !== undefined && notaD !== '' ? parseFloat(notaD) : null,
+      dtos: dtos !== undefined && dtos !== '' ? parseFloat(dtos) : null,
+      fecha: new Date().toISOString()
+    };
+
+    await saveTournamentData(tournamentId, tData);
+
+    // Emitir evento para el semáforo
+    broadcast(tournamentId, {
+      type: 'BUFFER_UPDATED',
+      gymnastId,
+      aparato,
+      buffer: tData.bufferNotas[gymnastId][aparato]
+    });
+
+    res.json({ success: true, buffer: tData.bufferNotas[gymnastId][aparato] });
+  } catch (err) {
+    res.status(500).json({ error: 'Error al guardar nota en buffer' });
+  } finally {
+    release();
+  }
+});
+
+// 10.2 Jueza Líder calcula la nota final
+app.post('/api/tournaments/:tournamentId/calcular-nota-final', async (req, res) => {
+  const { tournamentId } = req.params;
+  const { gymnastId, aparato, notaD: reqNotaD, dtos: reqDtos, liderNota, liderRol } = req.body;
+
+  if (!gymnastId || !aparato) {
+    return res.status(400).json({ error: 'Faltan campos' });
+  }
+
+  const adminPinHeader = req.headers['x-admin-pin'];
+  const juezPinHeader = req.headers['x-juez-pin'];
+
+  const lock = getTournamentLock(tournamentId);
+  const release = await lock.acquire();
+
+  try {
+    const tData = await loadTournament(tournamentId);
+    const isAdmin = adminPinHeader === tData.adminPin;
+    const isJuez = (juezPinHeader === tData.juezPin) || (tData.juezPinGam && juezPinHeader === tData.juezPinGam);
+    
+    if (!isAdmin && !isJuez) {
+      return res.status(403).json({ error: 'PIN de acceso incorrecto para este torneo' });
+    }
+
+    if (!tData.bufferNotas) tData.bufferNotas = {};
+    if (!tData.bufferNotas[gymnastId]) tData.bufferNotas[gymnastId] = {};
+    if (!tData.bufferNotas[gymnastId][aparato]) tData.bufferNotas[gymnastId][aparato] = {};
+    
+    const buffer = tData.bufferNotas[gymnastId][aparato];
+
+    // Si la jueza líder también envía su propia nota en este mismo momento:
+    if (liderRol && (liderNota !== undefined || reqNotaD !== undefined || reqDtos !== undefined)) {
+      buffer[liderRol] = {
+        nota: liderNota !== undefined && liderNota !== null ? parseFloat(liderNota) : null,
+        notaD: reqNotaD !== undefined && reqNotaD !== null ? parseFloat(reqNotaD) : null,
+        dtos: reqDtos !== undefined && reqDtos !== null ? parseFloat(reqDtos) : null,
+        fecha: new Date().toISOString()
+      };
+    }
+
+    if (Object.keys(buffer).length === 0) {
+      return res.status(400).json({ error: 'No hay notas en el buffer para calcular' });
+    }
+
+    const idx = tData.gimnastas.findIndex(g => g.id === gymnastId);
+    if (idx === -1) return res.status(404).json({ error: 'Gimnasta no encontrada' });
+
+    // Recolectar notas E (Juez 1, Juez 2, etc.)
+    const juecesKeys = Object.keys(buffer).filter(k => k.startsWith('Juez ') && !isNaN(parseInt(k.split(' ')[1])));
+    // Ordenar jueces (Juez 1, Juez 2...)
+    juecesKeys.sort((a, b) => parseInt(a.split(' ')[1]) - parseInt(b.split(' ')[1]));
+    
+    const validJueces = juecesKeys.map(k => buffer[k].nota).filter(n => n !== null);
+    
+    // Buscar notaD y dtos en el buffer (pueden venir del request o ya estar en el buffer)
+    let dScore = 0;
+    let dtos = 0;
+    Object.values(buffer).forEach(b => {
+      if (b.notaD !== null && b.notaD !== undefined) dScore = b.notaD;
+      if (b.dtos !== null && b.dtos !== undefined) dtos = b.dtos;
+    });
+
+    let averageDeduction = 0;
+    let notaB = 0;
+    let finalScore = 0;
+    const base = 10.00;
+
+    if (validJueces.length > 0) {
+      const averageVal = validJueces.reduce((a, b) => a + b, 0) / validJueces.length;
+      const isGamApparatus = aparato && (aparato.includes('(M)') || ['Arzones', 'Anillas', 'Barra Fija'].includes(aparato));
+      const isGAM = tData.modalidad === 'GAM' || (tData.modalidad === 'Ambos' && isGamApparatus);
+      
+      if (isGAM) {
+        notaB = averageVal;
+        averageDeduction = base - notaB; 
+        finalScore = averageVal - dtos; // dtos en GAM si los hubiera
+      } else {
+        averageDeduction = averageVal;
+        notaB = base - averageDeduction;
+        finalScore = notaB + dScore - dtos;
+      }
+
+      averageDeduction = parseFloat(averageDeduction.toFixed(3));
+      notaB = parseFloat(notaB.toFixed(3));
+      finalScore = parseFloat(finalScore.toFixed(3));
+    } else {
+      return res.status(400).json({ error: 'Faltan las notas de ejecución de los jueces' });
+    }
+
+    if (!tData.gimnastas[idx].notas) tData.gimnastas[idx].notas = {};
+    
+    // Convertir el arreglo para retrocompatibilidad
+    const maxJuez = juecesKeys.length > 0 ? Math.max(...juecesKeys.map(k => parseInt(k.split(' ')[1]))) : 0;
+    const arrayJueces = Array(maxJuez).fill(null);
+    juecesKeys.forEach(k => {
+      const jIdx = parseInt(k.split(' ')[1]) - 1;
+      arrayJueces[jIdx] = buffer[k].nota;
+    });
+
+    tData.gimnastas[idx].notas[aparato] = {
+      jueces: arrayJueces,
+      notaD: dScore,
+      notaB,
+      dtos,
+      final: finalScore,
+      baseScore: base,
+      fechaRegistro: new Date().toISOString()
+    };
+
+    // Limpiar buffer para este aparato y gimnasta
+    delete tData.bufferNotas[gymnastId][aparato];
+
+    await saveTournamentData(tournamentId, tData);
+
+    broadcast(tournamentId, { 
+      type: 'SCORE_SUBMITTED', 
+      gymnast: tData.gimnastas[idx],
+      aparato,
+      score: tData.gimnastas[idx].notas[aparato]
+    });
+    // Broadcast extra para que el AdminDashboard limpie el semáforo
+    broadcast(tournamentId, {
+      type: 'BUFFER_CLEARED',
+      gymnastId,
+      aparato
+    });
+
+    res.json({ success: true, gymnast: tData.gimnastas[idx] });
+  } catch (err) {
+    res.status(500).json({ error: 'Error al calcular nota final' });
   } finally {
     release();
   }

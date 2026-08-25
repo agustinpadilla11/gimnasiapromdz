@@ -53,6 +53,9 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
   const [turnoFiles, setTurnoFiles] = useState([]);
   const [selectedTurno, setSelectedTurno] = useState('Todos');
 
+  // Estado para buffers (Semáforos)
+  const [buffers, setBuffers] = useState({});
+
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
@@ -145,6 +148,17 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
           setTimeout(() => {
             setScoreNotifications(prev => prev.filter(n => n.id !== newNotif.id));
           }, 10000);
+        } else if (msg.type === 'BUFFER_UPDATED') {
+          setBuffers(prev => ({
+            ...prev,
+            [`${msg.gymnastId}-${msg.aparato}`]: msg.buffer || {}
+          }));
+        } else if (msg.type === 'BUFFER_CLEARED') {
+          setBuffers(prev => {
+            const copy = { ...prev };
+            delete copy[`${msg.gymnastId}-${msg.aparato}`];
+            return copy;
+          });
         }
       } catch (e) {
         console.error('Error al procesar mensaje de WebSocket:', e);
@@ -373,7 +387,8 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
 
     setScoringForm({
       jueces: initialJueces,
-      dtos: notaObj?.dtos !== undefined ? String(notaObj.dtos) : '0.00'
+      dtos: notaObj?.dtos !== undefined ? String(notaObj.dtos) : '0.00',
+      notaD: notaObj?.notaD !== undefined ? String(notaObj.notaD) : '0.00'
     });
   };
 
@@ -382,22 +397,46 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
       e.preventDefault();
       if (index === 'dtos') {
         handleSaveScore();
+      } else if (index === 'notaD') {
+        const dtosInput = document.getElementById('dtos-input');
+        if (dtosInput) {
+          dtosInput.focus();
+          dtosInput.select();
+        }
       } else {
         const nextInput = document.getElementById(`juez-input-${index + 1}`);
         if (nextInput) {
           nextInput.focus();
           nextInput.select();
         } else {
-          const dtosInput = document.getElementById('dtos-input');
-          if (dtosInput) {
-            dtosInput.focus();
-            dtosInput.select();
+          const notaDInput = document.getElementById('notad-input');
+          if (notaDInput) {
+            notaDInput.focus();
+            notaDInput.select();
+          } else {
+            const dtosInput = document.getElementById('dtos-input');
+            if (dtosInput) {
+              dtosInput.focus();
+              dtosInput.select();
+            }
           }
         }
       }
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       if (index === 'dtos') {
+        const notaDInput = document.getElementById('notad-input');
+        if (notaDInput) {
+          notaDInput.focus();
+          notaDInput.select();
+        } else {
+          const prevInput = document.getElementById('juez-input-5');
+          if (prevInput) {
+            prevInput.focus();
+            prevInput.select();
+          }
+        }
+      } else if (index === 'notaD') {
         const prevInput = document.getElementById('juez-input-5');
         if (prevInput) {
           prevInput.focus();
@@ -495,6 +534,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
           aparato: scoringApparatus,
           jueces: scoringForm.jueces.map(v => v === '' ? null : parseFloat(v)),
           dtos: parseFloat(scoringForm.dtos) || 0,
+          notaD: parseFloat(scoringForm.notaD) || 0,
           baseScore: getBaseScoreForGymnast(scoringGymnast, scoringApparatus)
         })
       });
@@ -871,6 +911,13 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
           <Trophy size={18} style={{ verticalAlign: 'middle', marginRight: '6px' }} />
           Clasificaciones y Podios
         </button>
+        <button 
+          onClick={() => setActiveTab('semaforos')} 
+          className={`tab-btn ${activeTab === 'semaforos' ? 'active' : ''}`}
+        >
+          <Tv size={18} style={{ verticalAlign: 'middle', marginRight: '6px' }} />
+          Panel de Semáforos
+        </button>
       </div>
 
       {/* SECTOR DE TURNOS DYNAMIC/PREMIUM */}
@@ -1085,31 +1132,8 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                               }}
                               title="Haz clic para modificar la nota"
                             >
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                 <span>{scoreVal !== undefined ? parseFloat(scoreVal).toFixed(3) : '-'}</span>
-                                {scoreVal !== undefined && scoreVal !== null && (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleProjectScore(g, ap, scoreObj);
-                                    }}
-                                    style={{
-                                      background: 'rgba(59, 130, 246, 0.15)',
-                                      border: 'none',
-                                      borderRadius: '4px',
-                                      color: 'var(--accent-primary)',
-                                      cursor: 'pointer',
-                                      padding: '4px 6px',
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      transition: 'all 0.2s',
-                                    }}
-                                    title="Proyectar esta nota en la pantalla de resultados"
-                                  >
-                                    <Tv size={12} />
-                                  </button>
-                                )}
                               </div>
                             </td>
                           );
@@ -1570,6 +1594,63 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
         </div>
       )}
 
+      {activeTab === 'semaforos' && (
+        <div>
+          <h2 style={{ marginBottom: '20px' }}>Panel de Semáforos (Buffers de Jueces)</h2>
+          {gymnasts.length === 0 ? (
+            <p>No hay gimnastas registrados.</p>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
+              {gymnasts.map(g => {
+                const hasPendingBuffers = tournament.aparatos.some(ap => {
+                  const key = `${g.id}-${ap}`;
+                  return buffers[key] && Object.keys(buffers[key]).length > 0;
+                });
+                
+                if (!hasPendingBuffers) return null;
+
+                return (
+                  <div key={g.id} className="glass-panel" style={{ padding: '20px', background: 'var(--bg-secondary)' }}>
+                    <h3 style={{ fontSize: '1.2rem', marginBottom: '10px' }}>{g.nombre}</h3>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '15px' }}>{g.institucion}</p>
+                    
+                    {tournament.aparatos.map(ap => {
+                      const key = `${g.id}-${ap}`;
+                      const buffer = buffers[key];
+                      if (!buffer || Object.keys(buffer).length === 0) return null;
+
+                      return (
+                        <div key={ap} style={{ marginBottom: '10px' }}>
+                          <h4 style={{ fontSize: '0.9rem', color: 'var(--accent-primary)', marginBottom: '5px' }}>{ap}</h4>
+                          <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                            {['Juez 1', 'Juez 2', 'Juez 3', 'Juez 4', 'Juez 5', 'Juez 6'].map(j => {
+                              const submitted = buffer[j];
+                              if (!submitted) return null;
+                              return (
+                                <div key={j} style={{
+                                  padding: '4px 8px',
+                                  borderRadius: '6px',
+                                  background: 'rgba(16, 185, 129, 0.2)',
+                                  border: '1px solid var(--accent-success)',
+                                  color: 'var(--accent-success)',
+                                  fontSize: '0.8rem'
+                                }}>
+                                  {j}: {buffer[j].nota}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
 
       {/* MODAL: CARGAR TURNO / DÍA */}
       {showTurnoModal && (
@@ -1746,20 +1827,43 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                 );
               })}
 
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 2fr', alignItems: 'center', gap: '15px', borderTop: '1px solid var(--border-color)', paddingTop: '15px' }}>
-                <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Descuento Mesa (DTOS):</label>
-                <input
-                  id="dtos-input"
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  max="5"
-                  className="input-field"
-                  value={scoringForm.dtos}
-                  onKeyDown={(e) => handleModalKeyDown(e, 'dtos')}
-                  onChange={(e) => setScoringForm(prev => ({ ...prev, dtos: e.target.value }))}
-                />
-              </div>
+              {(() => {
+                const isGamContext = tournament.modalidad === 'GAM' || (tournament.modalidad === 'Ambos' && scoringApparatus && (scoringApparatus.includes('(M)') || ['Arzones', 'Anillas', 'Barra Fija'].includes(scoringApparatus)));
+                return (
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 2fr', alignItems: 'center', gap: '15px', borderTop: '1px solid var(--border-color)', paddingTop: '15px' }}>
+                    {!isGamContext && (
+                      <>
+                        <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Nota D (Dificultad):</label>
+                        <input
+                          id="notad-input"
+                          type="number"
+                          step="0.05"
+                          min="0"
+                          max="20"
+                          className="input-field"
+                          style={{ marginBottom: '10px' }}
+                          value={scoringForm.notaD}
+                          onKeyDown={(e) => handleModalKeyDown(e, 'notaD')}
+                          onChange={(e) => setScoringForm(prev => ({ ...prev, notaD: e.target.value }))}
+                        />
+                      </>
+                    )}
+                    
+                    <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Descuento Mesa (DTOS):</label>
+                    <input
+                      id="dtos-input"
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="5"
+                      className="input-field"
+                      value={scoringForm.dtos}
+                      onKeyDown={(e) => handleModalKeyDown(e, 'dtos')}
+                      onChange={(e) => setScoringForm(prev => ({ ...prev, dtos: e.target.value }))}
+                    />
+                  </div>
+                );
+              })()}
             </div>
 
             <div style={{ display: 'flex', gap: '12px', marginTop: '30px' }}>
