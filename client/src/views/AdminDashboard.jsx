@@ -1401,9 +1401,9 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                       </div>
                     ))}
                   </div>
-                  )}
+                )}
 
-                  {/* TABLA PODIO POR EQUIPOS */}
+                {/* TABLA PODIO POR EQUIPOS */}
                   {showEquipos && (
                   <div>
                     <h3 style={{ fontSize: '1.1rem', marginBottom: '15px', color: 'var(--accent-purple)', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1497,6 +1497,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                         </tbody>
                       </table>
                     </div>
+                  </div>
                   )}
 
                 </div>
