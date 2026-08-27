@@ -177,9 +177,19 @@ export const exportTournamentToExcel = (tournament, sortBy = 'grupo') => {
 
   // 1. Generar hojas para cada aparato
   aparatos.forEach(aparato => {
-    const rowData = [
-      ['TURNO', 'GIMNASTA', 'FECHA DE NACIMIENTO', 'INSTITUCIÓN', 'CATEGORÍA', 'NIVEL', 'JUEZ 1', 'JUEZ 2', 'JUEZ 3', 'n° jueces', 'NOTA B', 'DTOS', 'N.FINAL']
-    ];
+    const isGamApparatus = tournament?.modalidad === 'GAM' || (tournament?.modalidad === 'Ambos' && (aparato.includes('(M)') || ['Arzones', 'Anillas', 'Barra Fija'].includes(aparato)));
+    const isNotaD = tournament?.configuracion?.tipoCalculo === 'Nota D' || tournament?.configuracion?.tipoCalculo === 'Ambas';
+    const showNotaD = isNotaD && !isGamApparatus;
+
+    const headerRow = ['TURNO', 'GIMNASTA', 'FECHA DE NACIMIENTO', 'INSTITUCIÓN', 'CATEGORÍA', 'NIVEL', 'JUEZ 1', 'JUEZ 2', 'JUEZ 3', 'n° jueces'];
+    if (showNotaD) {
+      headerRow.push('NOTA D', 'NOTA B');
+    } else {
+      headerRow.push('NOTA B');
+    }
+    headerRow.push('DTOS', 'N.FINAL');
+
+    const rowData = [headerRow];
 
     // Filtrar gimnastas que tengan nota o que correspondan al torneo
     sortedGimnastas.forEach(g => {
@@ -188,11 +198,13 @@ export const exportTournamentToExcel = (tournament, sortBy = 'grupo') => {
       const j2 = notaObj?.jueces?.[1] !== undefined ? parseFloat(notaObj.jueces[1]) : '';
       const j3 = notaObj?.jueces?.[2] !== undefined ? parseFloat(notaObj.jueces[2]) : '';
       const numJueces = notaObj?.jueces ? notaObj.jueces.filter(j => j !== null && j !== undefined).length : 0;
+      
+      const notaD = notaObj?.notaD !== undefined ? parseFloat(notaObj.notaD) : '';
       const notaB = notaObj?.notaB !== undefined ? parseFloat(notaObj.notaB) : '';
       const dtos = notaObj?.dtos !== undefined ? parseFloat(notaObj.dtos) : '';
       const nFinal = notaObj?.final !== undefined ? parseFloat(notaObj.final) : '';
 
-      rowData.push([
+      const dataRow = [
         g.grupo || 'Turno 1',
         g.nombre,
         g.fechaNacimiento || g.nacimiento || '',
@@ -202,11 +214,17 @@ export const exportTournamentToExcel = (tournament, sortBy = 'grupo') => {
         j1,
         j2,
         j3,
-        numJueces || '',
-        notaB,
-        dtos,
-        nFinal
-      ]);
+        numJueces || ''
+      ];
+
+      if (showNotaD) {
+        dataRow.push(notaD, notaB);
+      } else {
+        dataRow.push(notaB);
+      }
+      dataRow.push(dtos, nFinal);
+
+      rowData.push(dataRow);
     });
 
     const worksheet = XLSX.utils.aoa_to_sheet(rowData);
