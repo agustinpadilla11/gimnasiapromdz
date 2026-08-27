@@ -1308,6 +1308,10 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
             const podiumsByYear = getPodiumByYear(groupKey);
             const teamRankings = getTeamRankings(groupKey);
 
+            const showEquipos = tournament?.configuracion?.premios?.equipos ?? true;
+            const showAparatos = tournament?.configuracion?.premios?.aparatos ?? true;
+            const showAllAround = tournament?.configuracion?.premios?.allAround ?? true;
+
             return (
               <div key={groupKey} className="glass-panel" style={{ padding: '24px' }}>
                 <h2 style={{ 
@@ -1327,6 +1331,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '30px', alignItems: 'start' }}>
                   
                   {/* TABLA PODIO POR AÑO (Clasificación Clave) */}
+                  {showAllAround && (
                   <div>
                     <h3 style={{ fontSize: '1.1rem', marginBottom: '15px', color: 'var(--accent-gold)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <Trophy size={18} />
@@ -1396,8 +1401,10 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                       </div>
                     ))}
                   </div>
+                  )}
 
                   {/* TABLA PODIO POR EQUIPOS */}
+                  {showEquipos && (
                   <div>
                     <h3 style={{ fontSize: '1.1rem', marginBottom: '15px', color: 'var(--accent-purple)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <Users size={18} />
@@ -1490,11 +1497,12 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                         </tbody>
                       </table>
                     </div>
-                  </div>
+                  )}
 
                 </div>
 
                 {/* NUEVO: CLASIFICACIONES POR APARATO */}
+                {showAparatos && (
                 <div style={{ marginTop: '40px' }}>
                   <h3 style={{ fontSize: '1.1rem', marginBottom: '15px', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Award size={18} />
@@ -1581,6 +1589,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                     ))}
                   </div>
                 </div>
+                )}
 
               </div>
             );

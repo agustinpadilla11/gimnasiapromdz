@@ -37,6 +37,18 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
     };
   }, []);
 
+  useEffect(() => {
+    if (tournament) {
+      const showEquipos = tournament.configuracion?.premios?.equipos ?? true;
+      const showAllAround = tournament.configuracion?.premios?.allAround ?? true;
+      if (!showAllAround && showEquipos && viewMode === 'individual') {
+        setViewMode('equipos');
+      } else if (!showEquipos && showAllAround && viewMode === 'equipos') {
+        setViewMode('individual');
+      }
+    }
+  }, [tournament, viewMode]);
+
   const handleToggleFullscreen = () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(err => {
@@ -346,14 +358,19 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
     rotationTimerRef.current = setInterval(() => {
       const keys = rotatedGroups;
       if (keys.length === 0) return;
+
+      const showEquipos = tournament?.configuracion?.premios?.equipos ?? true;
+      const showAllAround = tournament?.configuracion?.premios?.allAround ?? true;
  
       if (viewMode === 'individual') {
         // Pasar a ranking por equipos o al siguiente grupo
         if (activeGroupIndex < keys.length - 1) {
           setActiveGroupIndex(prev => prev + 1);
         } else {
-          // Cambiar a ver equipos
-          setViewMode('equipos');
+          // Cambiar a ver equipos si está habilitado
+          if (showEquipos) {
+            setViewMode('equipos');
+          }
           setActiveGroupIndex(0);
         }
       } else {
@@ -361,7 +378,9 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
         if (activeGroupIndex < keys.length - 1) {
           setActiveGroupIndex(prev => prev + 1);
         } else {
-          setViewMode('individual');
+          if (showAllAround) {
+            setViewMode('individual');
+          }
           setActiveGroupIndex(0);
         }
       }
