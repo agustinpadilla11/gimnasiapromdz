@@ -358,7 +358,7 @@ app.delete('/api/tournaments/:tournamentId/gymnasts/:gymnastId', requireAdmin, a
 // 10. Guardar o actualizar notas (Juez/Admin)
 app.post('/api/tournaments/:tournamentId/score', async (req, res) => {
   const { tournamentId } = req.params;
-  const { gymnastId, aparato, jueces, dtos, baseScore } = req.body;
+  const { gymnastId, aparato, jueces, dtos, dtosAparato, baseScore } = req.body;
 
   if (!gymnastId || !aparato || !jueces) {
     return res.status(400).json({ error: 'Campos requeridos faltantes' });
@@ -408,6 +408,7 @@ app.post('/api/tournaments/:tournamentId/score', async (req, res) => {
     let finalScore = 0;
     const base = baseScore !== undefined ? parseFloat(baseScore) : 10.00;
     const discount = dtos !== undefined && dtos !== '' ? parseFloat(dtos) : 0.0;
+    const discountAparato = dtosAparato !== undefined && dtosAparato !== '' ? parseFloat(dtosAparato) : 0.0;
     const dScore = req.body.notaD !== undefined && req.body.notaD !== '' ? parseFloat(req.body.notaD) : 0.0;
 
     if (validJueces.length > 0) {
@@ -419,11 +420,11 @@ app.post('/api/tournaments/:tournamentId/score', async (req, res) => {
         // En GAM, el juez ingresa la nota final. Restamos el descuento de mesa si lo hay.
         notaB = averageVal;
         averageDeduction = base - notaB; 
-        finalScore = averageVal - discount;
+        finalScore = averageVal - discount - discountAparato;
       } else {
         averageDeduction = averageVal;
         notaB = base - averageDeduction;
-        finalScore = notaB + dScore - discount;
+        finalScore = notaB + dScore - discount - discountAparato;
       }
 
       // Redondear a 3 decimales
@@ -444,6 +445,7 @@ app.post('/api/tournaments/:tournamentId/score', async (req, res) => {
       notaD: dScore,
       notaB,
       dtos: discount,
+      dtosAparato: discountAparato,
       final: finalScore,
       baseScore: base,
       fechaRegistro: new Date().toISOString()
@@ -523,84 +525,87 @@ app.post('/api/tournaments/:tournamentId/juez-nota-individual', async (req, res)
 // 10.2 Jueza Líder calcula la nota final
 app.post('/api/tournaments/:tournamentId/calcular-nota-final', async (req, res) => {
   const { tournamentId } = req.params;
-  const { gymnastId, aparato, notaD: reqNotaD, dtos: reqDtos, liderNota, liderRol } = req.body;
+    const { gymnastId, aparato, notaD: reqNotaD, dtos: reqDtos, dtosAparato: reqDtosAparato, liderNota, liderRol } = req.body;
 
-  if (!gymnastId || !aparato) {
-    return res.status(400).json({ error: 'Faltan campos' });
-  }
-
-  const adminPinHeader = req.headers['x-admin-pin'];
-  const juezPinHeader = req.headers['x-juez-pin'];
-
-  const lock = getTournamentLock(tournamentId);
-  const release = await lock.acquire();
-
-  try {
-    const tData = await loadTournament(tournamentId);
-    const isAdmin = adminPinHeader === tData.adminPin;
-    const isJuez = (juezPinHeader === tData.juezPin) || (tData.juezPinGam && juezPinHeader === tData.juezPinGam);
-    
-    if (!isAdmin && !isJuez) {
-      return res.status(403).json({ error: 'PIN de acceso incorrecto para este torneo' });
+    if (!gymnastId || !aparato) {
+      return res.status(400).json({ error: 'Faltan campos' });
     }
 
-    if (!tData.bufferNotas) tData.bufferNotas = {};
-    if (!tData.bufferNotas[gymnastId]) tData.bufferNotas[gymnastId] = {};
-    if (!tData.bufferNotas[gymnastId][aparato]) tData.bufferNotas[gymnastId][aparato] = {};
-    
-    const buffer = tData.bufferNotas[gymnastId][aparato];
+    const adminPinHeader = req.headers['x-admin-pin'];
+    const juezPinHeader = req.headers['x-juez-pin'];
 
-    // Si la jueza líder también envía su propia nota en este mismo momento:
-    if (liderRol && (liderNota !== undefined || reqNotaD !== undefined || reqDtos !== undefined)) {
-      buffer[liderRol] = {
-        nota: liderNota !== undefined && liderNota !== null ? parseFloat(liderNota) : null,
-        notaD: reqNotaD !== undefined && reqNotaD !== null ? parseFloat(reqNotaD) : null,
-        dtos: reqDtos !== undefined && reqDtos !== null ? parseFloat(reqDtos) : null,
-        fecha: new Date().toISOString()
-      };
-    }
+    const lock = getTournamentLock(tournamentId);
+    const release = await lock.acquire();
 
-    if (Object.keys(buffer).length === 0) {
-      return res.status(400).json({ error: 'No hay notas en el buffer para calcular' });
-    }
-
-    const idx = tData.gimnastas.findIndex(g => g.id === gymnastId);
-    if (idx === -1) return res.status(404).json({ error: 'Gimnasta no encontrada' });
-
-    // Recolectar notas E (Juez 1, Juez 2, etc.)
-    const juecesKeys = Object.keys(buffer).filter(k => k.startsWith('Juez ') && !isNaN(parseInt(k.split(' ')[1])));
-    // Ordenar jueces (Juez 1, Juez 2...)
-    juecesKeys.sort((a, b) => parseInt(a.split(' ')[1]) - parseInt(b.split(' ')[1]));
-    
-    const validJueces = juecesKeys.map(k => buffer[k].nota).filter(n => n !== null);
-    
-    // Buscar notaD y dtos en el buffer (pueden venir del request o ya estar en el buffer)
-    let dScore = 0;
-    let dtos = 0;
-    Object.values(buffer).forEach(b => {
-      if (b.notaD !== null && b.notaD !== undefined) dScore = b.notaD;
-      if (b.dtos !== null && b.dtos !== undefined) dtos = b.dtos;
-    });
-
-    let averageDeduction = 0;
-    let notaB = 0;
-    let finalScore = 0;
-    const base = 10.00;
-
-    if (validJueces.length > 0) {
-      const averageVal = validJueces.reduce((a, b) => a + b, 0) / validJueces.length;
-      const isGamApparatus = aparato && (aparato.includes('(M)') || ['Arzones', 'Anillas', 'Barra Fija'].includes(aparato));
-      const isGAM = tData.modalidad === 'GAM' || (tData.modalidad === 'Ambos' && isGamApparatus);
+    try {
+      const tData = await loadTournament(tournamentId);
+      const isAdmin = adminPinHeader === tData.adminPin;
+      const isJuez = (juezPinHeader === tData.juezPin) || (tData.juezPinGam && juezPinHeader === tData.juezPinGam);
       
-      if (isGAM) {
-        notaB = averageVal;
-        averageDeduction = base - notaB; 
-        finalScore = averageVal - dtos; // dtos en GAM si los hubiera
-      } else {
-        averageDeduction = averageVal;
-        notaB = base - averageDeduction;
-        finalScore = notaB + dScore - dtos;
+      if (!isAdmin && !isJuez) {
+        return res.status(403).json({ error: 'PIN de acceso incorrecto para este torneo' });
       }
+
+      if (!tData.bufferNotas) tData.bufferNotas = {};
+      if (!tData.bufferNotas[gymnastId]) tData.bufferNotas[gymnastId] = {};
+      if (!tData.bufferNotas[gymnastId][aparato]) tData.bufferNotas[gymnastId][aparato] = {};
+      
+      const buffer = tData.bufferNotas[gymnastId][aparato];
+
+      // Si la jueza líder también envía su propia nota en este mismo momento:
+      if (liderRol && (liderNota !== undefined || reqNotaD !== undefined || reqDtos !== undefined || reqDtosAparato !== undefined)) {
+        buffer[liderRol] = {
+          nota: liderNota !== undefined && liderNota !== null ? parseFloat(liderNota) : null,
+          notaD: reqNotaD !== undefined && reqNotaD !== null ? parseFloat(reqNotaD) : null,
+          dtos: reqDtos !== undefined && reqDtos !== null ? parseFloat(reqDtos) : null,
+          dtosAparato: reqDtosAparato !== undefined && reqDtosAparato !== null ? parseFloat(reqDtosAparato) : null,
+          fecha: new Date().toISOString()
+        };
+      }
+
+      if (Object.keys(buffer).length === 0) {
+        return res.status(400).json({ error: 'No hay notas en el buffer para calcular' });
+      }
+
+      const idx = tData.gimnastas.findIndex(g => g.id === gymnastId);
+      if (idx === -1) return res.status(404).json({ error: 'Gimnasta no encontrada' });
+
+      // Recolectar notas E (Juez 1, Juez 2, etc.)
+      const juecesKeys = Object.keys(buffer).filter(k => k.startsWith('Juez ') && !isNaN(parseInt(k.split(' ')[1])));
+      // Ordenar jueces (Juez 1, Juez 2...)
+      juecesKeys.sort((a, b) => parseInt(a.split(' ')[1]) - parseInt(b.split(' ')[1]));
+      
+      const validJueces = juecesKeys.map(k => buffer[k].nota).filter(n => n !== null);
+      
+      // Buscar notaD, dtos, y dtosAparato en el buffer (pueden venir del request o ya estar en el buffer)
+      let dScore = 0;
+      let dtos = 0;
+      let dtosAparato = 0;
+      Object.values(buffer).forEach(b => {
+        if (b.notaD !== null && b.notaD !== undefined) dScore = b.notaD;
+        if (b.dtos !== null && b.dtos !== undefined) dtos = b.dtos;
+        if (b.dtosAparato !== null && b.dtosAparato !== undefined) dtosAparato = b.dtosAparato;
+      });
+
+      let averageDeduction = 0;
+      let notaB = 0;
+      let finalScore = 0;
+      const base = 10.00;
+
+      if (validJueces.length > 0) {
+        const averageVal = validJueces.reduce((a, b) => a + b, 0) / validJueces.length;
+        const isGamApparatus = aparato && (aparato.includes('(M)') || ['Arzones', 'Anillas', 'Barra Fija'].includes(aparato));
+        const isGAM = tData.modalidad === 'GAM' || (tData.modalidad === 'Ambos' && isGamApparatus);
+        
+        if (isGAM) {
+          notaB = averageVal;
+          averageDeduction = base - notaB; 
+          finalScore = averageVal - dtos - dtosAparato; // dtos en GAM si los hubiera
+        } else {
+          averageDeduction = averageVal;
+          notaB = base - averageDeduction;
+          finalScore = notaB + dScore - dtos - dtosAparato;
+        }
 
       averageDeduction = parseFloat(averageDeduction.toFixed(3));
       notaB = parseFloat(notaB.toFixed(3));
@@ -624,6 +629,7 @@ app.post('/api/tournaments/:tournamentId/calcular-nota-final', async (req, res) 
       notaD: dScore,
       notaB,
       dtos,
+      dtosAparato,
       final: finalScore,
       baseScore: base,
       fechaRegistro: new Date().toISOString()

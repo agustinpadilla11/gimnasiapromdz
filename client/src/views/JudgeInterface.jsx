@@ -54,6 +54,7 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
   const [juezDeductions, setJuezDeductions] = useState(['', '', '', '', '', '']); // Deducciones de Juez 1 a 6
   const [notaD, setNotaD] = useState(''); // Nota D (Dificultad)
   const [mesaDeduction, setMesaDeduction] = useState(0); // Descuento de mesa (penalizaciones neutrales)
+  const [aparatoDeduction, setAparatoDeduction] = useState(0); // Descuento de aparato acumulativo
   const [currentInputIdx, setCurrentInputIdx] = useState(0); // Foco en el teclado numérico virtual
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState('');
@@ -334,10 +335,12 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
       setNumJueces(notaExistente.jueces.length);
       setNotaD(notaExistente.notaD !== undefined ? String(notaExistente.notaD) : '');
       setMesaDeduction(notaExistente.dtos !== undefined ? parseFloat(notaExistente.dtos) : 0);
+      setAparatoDeduction(notaExistente.dtosAparato !== undefined ? parseFloat(notaExistente.dtosAparato) : 0);
     } else {
       setJuezDeductions(['', '', '', '', '', '']);
       setNotaD('');
       setMesaDeduction(0);
+      setAparatoDeduction(0);
     }
     setCurrentInputIdx(0);
   };
@@ -375,7 +378,7 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
     const base = getBaseScoreForGymnast(selectedGymnast);
 
     if (activeVals.length === 0) {
-      const final = base - mesaDeduction;
+      const final = base - mesaDeduction - aparatoDeduction;
       return {
         promedio: 0,
         notaB: base,
@@ -392,10 +395,10 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
     if (activeModalidad === 'GAM') {
       // En GAM el juez ingresa la nota final calculada por él mismo.
       notaB = promedio; // notaB referenciará el promedio ingresado por jueces para visualización
-      final = promedio;
+      final = promedio - mesaDeduction - aparatoDeduction;
     } else {
       notaB = base - promedio;
-      final = notaB + (parseFloat(notaD) || 0) - mesaDeduction;
+      final = notaB + (parseFloat(notaD) || 0) - mesaDeduction - aparatoDeduction;
     }
 
     return {
@@ -475,6 +478,7 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
           aparato: selectedApparatus,
           notaD: notaD === '' ? 0 : parseFloat(notaD),
           dtos: mesaDeduction,
+          dtosAparato: aparatoDeduction,
           liderNota: juezNota,
           liderRol: judgeRole,
           baseScore: getBaseScoreForGymnast(selectedGymnast)
@@ -577,6 +581,7 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
       setCurrentInputIdx(prev => prev + 1);
     }
   };
+  const isNotaDTournament = tournament?.configuracion?.tipoCalculo === 'Nota D' || tournament?.configuracion?.tipoCalculo === 'Ambas';
 
   return (
     <div style={{ padding: '20px', maxWidth: '1400px', margin: '0 auto' }}>
@@ -1189,6 +1194,45 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
                           );
                         })}
                       </div>
+
+                      {isNotaDTournament && (
+                        <div style={{ marginTop: '24px' }}>
+                          <h4 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '8px', fontWeight: '600' }}>
+                            Descuento de Aparato: -{aparatoDeduction.toFixed(2)}
+                          </h4>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            {[
+                              { l: 'Limpiar (0.00)', v: '0.00', bg: 'rgba(16, 185, 129, 0.06)', bc: 'rgba(16, 185, 129, 0.25)', tc: 'var(--accent-success)' },
+                              { l: '(-0.10)', v: '0.10', bg: 'rgba(239, 68, 68, 0.03)', bc: 'rgba(239, 68, 68, 0.15)', tc: '#f87171' },
+                              { l: '(-0.30)', v: '0.30', bg: 'rgba(239, 68, 68, 0.04)', bc: 'rgba(239, 68, 68, 0.2)', tc: '#f87171' },
+                              { l: '(-0.50)', v: '0.50', bg: 'rgba(239, 68, 68, 0.06)', bc: 'rgba(239, 68, 68, 0.25)', tc: '#fca5a5' },
+                              { l: '(-1.00)', v: '1.00', bg: 'rgba(239, 68, 68, 0.12)', bc: 'rgba(239, 68, 68, 0.4)', tc: '#ef4444' }
+                            ].map(item => {
+                              const valNum = parseFloat(item.v);
+                              return (
+                                <button
+                                  key={item.v}
+                                  type="button"
+                                  onClick={() => valNum === 0 ? setAparatoDeduction(0) : setAparatoDeduction(prev => prev + valNum)}
+                                  className="btn"
+                                  style={{
+                                    padding: '8px 12px',
+                                    fontSize: '0.85rem',
+                                    fontWeight: '700',
+                                    background: item.bg,
+                                    border: `1px solid ${item.bc}`,
+                                    color: item.tc,
+                                    justifyContent: 'flex-start',
+                                    transition: 'all 0.1s ease',
+                                  }}
+                                >
+                                  {valNum === 0 ? item.l : `Sumar ${item.l}`}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
   
                       {/* Restablecer campos */}
                       <button
@@ -1196,6 +1240,7 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
                         onClick={() => {
                           setJuezDeductions(['', '', '', '', '', '']);
                           setMesaDeduction(0);
+                          setAparatoDeduction(0);
                         }}
                         className="btn btn-secondary"
                         style={{ width: '100%', marginTop: '16px', gap: '8px', fontSize: '0.85rem' }}

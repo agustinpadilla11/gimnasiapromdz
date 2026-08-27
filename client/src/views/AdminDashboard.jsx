@@ -388,6 +388,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
     setScoringForm({
       jueces: initialJueces,
       dtos: notaObj?.dtos !== undefined ? String(notaObj.dtos) : '0.00',
+      dtosAparato: notaObj?.dtosAparato !== undefined ? String(notaObj.dtosAparato) : '0.00',
       notaD: notaObj?.notaD !== undefined ? String(notaObj.notaD) : '0.00'
     });
   };
@@ -534,6 +535,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
           aparato: scoringApparatus,
           jueces: scoringForm.jueces.map(v => v === '' ? null : parseFloat(v)),
           dtos: parseFloat(scoringForm.dtos) || 0,
+          dtosAparato: parseFloat(scoringForm.dtosAparato) || 0,
           notaD: parseFloat(scoringForm.notaD) || 0,
           baseScore: getBaseScoreForGymnast(scoringGymnast, scoringApparatus)
         })
@@ -1859,6 +1861,29 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                       </>
                     )}
                     
+                    {(() => {
+                      const isNotaD = tournament?.configuracion?.tipoCalculo === 'Nota D' || tournament?.configuracion?.tipoCalculo === 'Ambas';
+                      if (isNotaD && !isGamContext) {
+                        return (
+                          <>
+                            <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Descuento Aparato:</label>
+                            <input
+                              id="dtos-aparato-input"
+                              type="number"
+                              step="0.1"
+                              min="0"
+                              max="5"
+                              className="input-field"
+                              value={scoringForm.dtosAparato}
+                              onKeyDown={(e) => handleModalKeyDown(e, 'dtosAparato')}
+                              onChange={(e) => setScoringForm(prev => ({ ...prev, dtosAparato: e.target.value }))}
+                            />
+                          </>
+                        );
+                      }
+                      return null;
+                    })()}
+
                     <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Descuento Mesa (DTOS):</label>
                     <input
                       id="dtos-input"
