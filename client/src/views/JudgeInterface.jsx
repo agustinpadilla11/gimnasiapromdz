@@ -591,62 +591,63 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
     <div style={{ padding: '20px', maxWidth: '1400px', margin: '0 auto' }}>
       
       {/* HEADER DE MESA JUECES */}
-      <header className="glass-panel" style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '16px 24px',
-        marginBottom: '24px',
-        background: 'var(--bg-card)',
-        flexWrap: 'wrap',
-        gap: '15px'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <div style={{
-            padding: '8px 12px',
-            borderRadius: '10px',
-            background: 'var(--accent-primary)',
-            color: '#fff',
-            fontWeight: '800',
-            fontSize: '1.1rem'
-          }}>
-            {selectedApparatus === 'Salto' ? '🪵' : selectedApparatus === 'Suelo' ? '🤸' : selectedApparatus === 'Viga' ? '🛹' : '🪜'} {selectedApparatus.toUpperCase()}
+      {(!isMobile || !selectedGymnast) && (
+        <header className="glass-panel" style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '16px 24px',
+          marginBottom: '24px',
+          background: 'var(--bg-card)',
+          flexWrap: 'wrap',
+          gap: '15px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+            <div style={{
+              padding: '8px 12px',
+              borderRadius: '10px',
+              background: 'var(--accent-primary)',
+              color: '#fff',
+              fontWeight: '800',
+              fontSize: '1.1rem'
+            }}>
+              {selectedApparatus === 'Salto' ? '🪵' : selectedApparatus === 'Suelo' ? '🤸' : selectedApparatus === 'Viga' ? '🛹' : '🪜'} {selectedApparatus.toUpperCase()}
+            </div>
+            <div>
+              <h2 style={{ fontSize: '1.2rem', marginBottom: '2px' }}>Panel de Jueces</h2>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                {tournament.nombre} ({activeModalidad})
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 style={{ fontSize: '1.2rem', marginBottom: '2px' }}>Panel de Jueces</h2>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-              {tournament.nombre} ({activeModalidad})
-            </p>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {/* Selector de Aparato en barra superior */}
+            <select
+              className="input-field"
+              style={{ width: '150px', padding: '8px 12px', fontSize: '0.9rem', cursor: 'pointer' }}
+              value={selectedApparatus}
+              onChange={(e) => {
+                setSelectedApparatus(e.target.value);
+                setSelectedGymnast(null);
+              }}
+            >
+              {tournament.aparatos.filter(ap => {
+                if (tournament.modalidad !== 'Ambos') return true;
+                if (activeModalidad === 'GAM') return ap.includes('(M)') || ['Arzones', 'Anillas', 'Barra Fija'].includes(ap);
+                return ap.includes('(F)') || ['Paralelas Asim.', 'Viga'].includes(ap);
+              }).map(ap => (
+                <option key={ap} value={ap}>{ap}</option>
+              ))}
+            </select>
+
+            <button onClick={onLogout} className="btn btn-secondary" style={{ padding: '8px 14px', gap: '6px' }}>
+              <LogOut size={16} />
+              Salir
+            </button>
           </div>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {/* Selector de Aparato en barra superior */}
-          <select
-            className="input-field"
-            style={{ width: '150px', padding: '8px 12px', fontSize: '0.9rem', cursor: 'pointer' }}
-            value={selectedApparatus}
-            onChange={(e) => {
-              setSelectedApparatus(e.target.value);
-              setSelectedGymnast(null);
-            }}
-          >
-            {tournament.aparatos.filter(ap => {
-              if (tournament.modalidad !== 'Ambos') return true;
-              if (activeModalidad === 'GAM') return ap.includes('(M)') || ['Arzones', 'Anillas', 'Barra Fija'].includes(ap);
-              return ap.includes('(F)') || ['Paralelas Asim.', 'Viga'].includes(ap);
-            }).map(ap => (
-              <option key={ap} value={ap}>{ap}</option>
-            ))}
-          </select>
-
-
-          <button onClick={onLogout} className="btn btn-secondary" style={{ padding: '8px 14px', gap: '6px' }}>
-            <LogOut size={16} />
-            Salir
-          </button>
-        </div>
-      </header>
+        </header>
+      )}
 
       <div style={{ 
         display: isMobile ? 'flex' : 'grid',
