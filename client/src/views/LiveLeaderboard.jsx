@@ -312,6 +312,7 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
                 id: Date.now() + Math.random(),
                 gymnastName: msg.gymnast.nombre,
                 score: msg.score.final,
+                notaD: msg.score.notaD,
                 aparato: msg.aparato
               };
               setScoreNotifications(prev => [...prev, newNotif]);
@@ -1009,29 +1010,53 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
         pointerEvents: 'none',
         alignItems: 'center'
       }}>
-        {scoreNotifications.map(notif => (
-          <div key={notif.id} className="fade-in" style={{
-            background: 'rgba(11, 18, 38, 0.95)',
-            color: 'white',
-            padding: '50px 80px',
-            borderRadius: '30px',
-            boxShadow: '0 30px 60px rgba(0,0,0,0.7)',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minWidth: '500px',
-            border: '4px solid var(--accent-primary)',
-            backdropFilter: 'blur(15px)'
-          }}>
-            <span style={{ fontSize: '2.5rem', fontWeight: 'bold', textTransform: 'uppercase', textAlign: 'center', color: 'var(--text-primary)' }}>
-              {notif.gymnastName}
-            </span>
-            <span style={{ fontSize: '7rem', fontWeight: '900', marginTop: '15px', color: 'var(--accent-primary)', textShadow: '0 0 30px rgba(59, 130, 246, 0.6)' }}>
-              {notif.score !== undefined && notif.score !== null ? notif.score.toFixed(3) : '-'}
-            </span>
-          </div>
-        ))}
+        {scoreNotifications.map(notif => {
+          const isGamApparatus = tournament?.modalidad === 'GAM' || (tournament?.modalidad === 'Ambos' && (notif.aparato.includes('(M)') || ['Arzones', 'Anillas', 'Barra Fija'].includes(notif.aparato)));
+          const showNotaD = tournament?.configuracion?.tipoCalculo !== 'base 10' && !isGamApparatus && notif.notaD !== undefined && notif.notaD !== null;
+
+          return (
+            <div key={notif.id} className="fade-in" style={{
+              background: 'rgba(11, 18, 38, 0.95)',
+              color: 'white',
+              padding: '50px 80px',
+              borderRadius: '30px',
+              boxShadow: '0 30px 60px rgba(0,0,0,0.7)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minWidth: '500px',
+              border: '4px solid var(--accent-primary)',
+              backdropFilter: 'blur(15px)'
+            }}>
+              <span style={{ fontSize: '2.5rem', fontWeight: 'bold', textTransform: 'uppercase', textAlign: 'center', color: 'var(--text-primary)' }}>
+                {notif.gymnastName}
+              </span>
+              
+              {showNotaD ? (
+                <div style={{ display: 'flex', gap: '40px', marginTop: '15px', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <span style={{ fontSize: '1rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Nota D</span>
+                    <span style={{ fontSize: '5rem', fontWeight: '800', color: '#f59e0b', textShadow: '0 0 20px rgba(245, 158, 11, 0.4)' }}>
+                      {notif.notaD.toFixed(3)}
+                    </span>
+                  </div>
+                  <div style={{ width: '2px', height: '80px', background: 'rgba(255,255,255,0.1)' }}></div>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <span style={{ fontSize: '1rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Final</span>
+                    <span style={{ fontSize: '7rem', fontWeight: '900', color: 'var(--accent-primary)', textShadow: '0 0 30px rgba(59, 130, 246, 0.6)' }}>
+                      {notif.score !== undefined && notif.score !== null ? notif.score.toFixed(3) : '-'}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <span style={{ fontSize: '7rem', fontWeight: '900', marginTop: '15px', color: 'var(--accent-primary)', textShadow: '0 0 30px rgba(59, 130, 246, 0.6)' }}>
+                  {notif.score !== undefined && notif.score !== null ? notif.score.toFixed(3) : '-'}
+                </span>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {/* ESTILOS CSS INLINE ADICIONALES PARA EL FADEIN */}
