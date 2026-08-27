@@ -969,29 +969,59 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
               {liveReveal.gymnast.institucion} • <strong>{liveReveal.gymnast.nivel} {liveReveal.gymnast.categoria}</strong>
             </p>
 
-            <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderTop: '1px solid rgba(255,255,255,0.06)',
-              paddingTop: '40px',
-              marginTop: '10px'
-            }}>
-              <div style={{ fontSize: '1.2rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '15px' }}>
-                Nota Final
-              </div>
-              <div style={{
-                fontSize: '8.5rem',
-                fontFamily: 'var(--font-mono)',
-                fontWeight: '900',
-                color: 'var(--accent-success)',
-                lineHeight: '1',
-                textShadow: '0 0 40px rgba(16, 185, 129, 0.45)'
-              }}>
-                {parseFloat(liveReveal.score.final).toFixed(3)}
-              </div>
-            </div>
+            {(() => {
+              const isGamApparatus = tournament?.modalidad === 'GAM' || (tournament?.modalidad === 'Ambos' && (liveReveal.aparato.includes('(M)') || ['Arzones', 'Anillas', 'Barra Fija'].includes(liveReveal.aparato)));
+              const tipoCalc = tournament?.configuracion?.tipoCalculo;
+              const showNotaD = tipoCalc !== 'base 10' && !isGamApparatus && liveReveal.score.notaD > 0;
+
+              return (
+                <div style={{
+                  display: 'flex',
+                  flexDirection: showNotaD ? 'row' : 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: showNotaD ? '80px' : '0',
+                  borderTop: '1px solid rgba(255,255,255,0.06)',
+                  paddingTop: '40px',
+                  marginTop: '10px'
+                }}>
+                  
+                  {showNotaD && (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      <div style={{ fontSize: '1.2rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '15px' }}>
+                        Nota D
+                      </div>
+                      <div style={{
+                        fontSize: '6.5rem',
+                        fontFamily: 'var(--font-mono)',
+                        fontWeight: '800',
+                        color: '#f59e0b',
+                        lineHeight: '1',
+                        textShadow: '0 0 30px rgba(245, 158, 11, 0.3)'
+                      }}>
+                        {parseFloat(liveReveal.score.notaD).toFixed(3)}
+                      </div>
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <div style={{ fontSize: '1.2rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '15px' }}>
+                      Nota Final
+                    </div>
+                    <div style={{
+                      fontSize: showNotaD ? '7.5rem' : '8.5rem',
+                      fontFamily: 'var(--font-mono)',
+                      fontWeight: '900',
+                      color: 'var(--accent-success)',
+                      lineHeight: '1',
+                      textShadow: '0 0 40px rgba(16, 185, 129, 0.45)'
+                    }}>
+                      {parseFloat(liveReveal.score.final).toFixed(3)}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
           </div>
         </div>
@@ -1012,7 +1042,8 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
       }}>
         {scoreNotifications.map(notif => {
           const isGamApparatus = tournament?.modalidad === 'GAM' || (tournament?.modalidad === 'Ambos' && (notif.aparato.includes('(M)') || ['Arzones', 'Anillas', 'Barra Fija'].includes(notif.aparato)));
-          const showNotaD = tournament?.configuracion?.tipoCalculo !== 'base 10' && !isGamApparatus && notif.notaD !== undefined && notif.notaD !== null;
+          const tipoCalc = tournament?.configuracion?.tipoCalculo;
+          const showNotaD = tipoCalc !== 'base 10' && !isGamApparatus && notif.notaD > 0;
 
           return (
             <div key={notif.id} className="fade-in" style={{
