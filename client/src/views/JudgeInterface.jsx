@@ -35,6 +35,7 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
   const [lastScore, setLastScore] = useState(null); 
   
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [showFiltersMobile, setShowFiltersMobile] = useState(false);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -518,17 +519,7 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
     setSubmittedSuccess(false);
     setLastSubmittedScore(null);
     setMessage('');
-
-    if (selectedGymnast) {
-      const currentIdx = pendingGymnasts.findIndex(g => g.id === selectedGymnast.id);
-      if (currentIdx !== -1 && currentIdx < pendingGymnasts.length - 1) {
-        handleSelectGymnast(pendingGymnasts[currentIdx + 1]);
-      } else if (pendingGymnasts.length > 1 && currentIdx === pendingGymnasts.length - 1) {
-        handleSelectGymnast(pendingGymnasts[0]);
-      } else {
-        setSelectedGymnast(null);
-      }
-    }
+    setSelectedGymnast(null);
   };
 
   // Emitir señal WS para proyectar la nota sólo en la TV HDMI de la mesa de este juez
@@ -665,57 +656,71 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
           </h3>
 
           {/* Barra de Filtros */}
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: '10px', marginBottom: '15px' }}>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label>Turno / Rotación</label>
-              <select 
-                className="input-field" 
-                style={{ padding: '8px' }}
-                value={activeTurno}
-                onChange={(e) => {
-                  setActiveTurno(e.target.value);
-                  setSelectedGymnast(null);
-                }}
+          <div style={{ marginBottom: '15px' }}>
+            {isMobile && (
+              <button 
+                onClick={() => setShowFiltersMobile(!showFiltersMobile)}
+                className="btn btn-secondary"
+                style={{ width: '100%', marginBottom: showFiltersMobile ? '15px' : '0', padding: '10px', fontSize: '0.9rem', justifyContent: 'center', background: 'rgba(255,255,255,0.03)' }}
               >
-                {turnos.length > 0 ? turnos.map(t => (
-                  <option key={t} value={t}>{t}</option>
-                )) : <option value="Turno 1">Turno 1</option>}
-              </select>
-            </div>
+                {showFiltersMobile ? 'Ocultar Filtros (Turno, Nivel, Categoría)' : 'Mostrar Filtros (Turno, Nivel, Categoría)'}
+              </button>
+            )}
+            
+            {(!isMobile || showFiltersMobile) && (
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: '10px' }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label>Turno / Rotación</label>
+                  <select 
+                    className="input-field" 
+                    style={{ padding: '8px' }}
+                    value={activeTurno}
+                    onChange={(e) => {
+                      setActiveTurno(e.target.value);
+                      setSelectedGymnast(null);
+                    }}
+                  >
+                    {turnos.length > 0 ? turnos.map(t => (
+                      <option key={t} value={t}>{t}</option>
+                    )) : <option value="Turno 1">Turno 1</option>}
+                  </select>
+                </div>
 
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label>Nivel</label>
-              <select 
-                className="input-field" 
-                style={{ padding: '8px' }}
-                value={activeNivel}
-                onChange={(e) => {
-                  setActiveNivel(e.target.value);
-                  setSelectedGymnast(null);
-                }}
-              >
-                {niveles.map(n => (
-                  <option key={n} value={n}>{n}</option>
-                ))}
-              </select>
-            </div>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label>Nivel</label>
+                  <select 
+                    className="input-field" 
+                    style={{ padding: '8px' }}
+                    value={activeNivel}
+                    onChange={(e) => {
+                      setActiveNivel(e.target.value);
+                      setSelectedGymnast(null);
+                    }}
+                  >
+                    {niveles.map(n => (
+                      <option key={n} value={n}>{n}</option>
+                    ))}
+                  </select>
+                </div>
 
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label>Categoría</label>
-              <select 
-                className="input-field" 
-                style={{ padding: '8px' }}
-                value={activeCategoria}
-                onChange={(e) => {
-                  setActiveCategoria(e.target.value);
-                  setSelectedGymnast(null);
-                }}
-              >
-                {categorias.map(c => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-            </div>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label>Categoría</label>
+                  <select 
+                    className="input-field" 
+                    style={{ padding: '8px' }}
+                    value={activeCategoria}
+                    onChange={(e) => {
+                      setActiveCategoria(e.target.value);
+                      setSelectedGymnast(null);
+                    }}
+                  >
+                    {categorias.map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="form-group" style={{ marginBottom: '20px' }}>
@@ -913,7 +918,7 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
                     boxShadow: '0 4px 15px rgba(59, 130, 246, 0.25)'
                   }}
                 >
-                  Siguiente Gimnasta
+                  Volver a Lista
                 </button>
               </div>
             </div>
