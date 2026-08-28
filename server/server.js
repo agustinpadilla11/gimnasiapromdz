@@ -253,27 +253,33 @@ app.post('/api/tournaments/:tournamentId/import', requireAdmin, upload.array('fi
       nuevasGimnastas = nuevasGimnastas.concat(gims);
     }
     
-    const tData = req.tournament;
+    const lock = getTournamentLock(tournamentId);
+    const release = await lock.acquire();
+    try {
+      const tData = await loadTournament(tournamentId);
 
-    if (turno) {
-      // Asignar el nombre del turno a cada gimnasta
-      nuevasGimnastas.forEach(g => {
-        g.grupo = turno;
-      });
+      if (turno) {
+        // Asignar el nombre del turno a cada gimnasta
+        nuevasGimnastas.forEach(g => {
+          g.grupo = turno;
+        });
 
-      // Filtrar gimnastas preexistentes de este mismo turno para evitar duplicaciones si vuelven a importar
-      const filtradas = (tData.gimnastas || []).filter(g => g.grupo !== turno);
-      tData.gimnastas = [...filtradas, ...nuevasGimnastas];
-    } else {
-      tData.gimnastas = [...(tData.gimnastas || []), ...nuevasGimnastas];
+        // Filtrar gimnastas preexistentes de este mismo turno para evitar duplicaciones si vuelven a importar
+        const filtradas = (tData.gimnastas || []).filter(g => g.grupo !== turno);
+        tData.gimnastas = [...filtradas, ...nuevasGimnastas];
+      } else {
+        tData.gimnastas = [...(tData.gimnastas || []), ...nuevasGimnastas];
+      }
+
+      await saveTournamentData(tournamentId, tData);
+      
+      // Notificar a todos por WebSocket
+      broadcast(tournamentId, { type: 'TOURNAMENT_RELOADED', gimnastas: tData.gimnastas });
+
+      res.json({ success: true, count: nuevasGimnastas.length });
+    } finally {
+      release();
     }
-
-    await saveTournamentData(tournamentId, tData);
-    
-    // Notificar a todos por WebSocket
-    broadcast(tournamentId, { type: 'TOURNAMENT_RELOADED', gimnastas: tData.gimnastas });
-
-    res.json({ success: true, count: nuevasGimnastas.length });
   } catch (e) {
     res.status(400).json({ error: e.message });
   }
@@ -288,26 +294,34 @@ app.post('/api/tournaments/:tournamentId/gymnasts', requireAdmin, async (req, re
     return res.status(400).json({ error: 'El nombre es obligatorio' });
   }
 
-  const tData = req.tournament;
-  const nueva = {
-    id: `g_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-    nombre,
-    nacimiento: nacimiento || '',
-    fechaNacimiento: nacimiento || '',
-    institucion: institucion || 'Independiente',
-    categoria: categoria || 'Única',
-    nivel: nivel || 'Nivel 1',
-    sexo: sexo || '',
-    grupo: grupo || 'Turno 1',
-    notas: {}
-  };
+  const lock = getTournamentLock(tournamentId);
+  const release = await lock.acquire();
+  try {
+    const tData = await loadTournament(tournamentId);
+    const nueva = {
+      id: `g_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+      nombre,
+      nacimiento: nacimiento || '',
+      fechaNacimiento: nacimiento || '',
+      institucion: institucion || 'Independiente',
+      categoria: categoria || 'Única',
+      nivel: nivel || 'Nivel 1',
+      sexo: sexo || '',
+      grupo: grupo || 'Turno 1',
+      notas: {}
+    };
 
-  tData.gimnastas.push(nueva);
-  await saveTournamentData(tournamentId, tData);
+    tData.gimnastas.push(nueva);
+    await saveTournamentData(tournamentId, tData);
 
-  broadcast(tournamentId, { type: 'GYMNAST_UPDATED', gymnast: nueva });
+    broadcast(tournamentId, { type: 'GYMNAST_UPDATED', gymnast: nueva });
 
-  res.status(201).json({ success: true, gymnast: nueva });
+    res.status(201).json({ success: true, gymnast: nueva });
+  } catch (err) {
+    res.status(500).json({ error: 'Error al agregar gimnasta' });
+  } finally {
+    release();
+  }
 });
 
 // 8. Modificar gimnasta individualmente (Admin)
@@ -315,45 +329,61 @@ app.put('/api/tournaments/:tournamentId/gymnasts/:gymnastId', requireAdmin, asyn
   const { tournamentId, gymnastId } = req.params;
   const updatedFields = req.body;
 
-  const tData = req.tournament;
-  const idx = tData.gimnastas.findIndex(g => g.id === gymnastId);
+  const lock = getTournamentLock(tournamentId);
+  const release = await lock.acquire();
+  try {
+    const tData = await loadTournament(tournamentId);
+    const idx = tData.gimnastas.findIndex(g => g.id === gymnastId);
 
-  if (idx === -1) {
-    return res.status(404).json({ error: 'Gimnasta no encontrada' });
+    if (idx === -1) {
+      return res.status(404).json({ error: 'Gimnasta no encontrada' });
+    }
+
+    // Conservar las notas existentes al actualizar campos de perfil
+    tData.gimnastas[idx] = {
+      ...tData.gimnastas[idx],
+      ...updatedFields,
+      id: gymnastId, // prevenir cambio de ID
+      notas: tData.gimnastas[idx].notas // no sobreescribir notas mediante este endpoint
+    };
+
+    await saveTournamentData(tournamentId, tData);
+
+    broadcast(tournamentId, { type: 'GYMNAST_UPDATED', gymnast: tData.gimnastas[idx] });
+
+    res.json({ success: true, gymnast: tData.gimnastas[idx] });
+  } catch (err) {
+    res.status(500).json({ error: 'Error al modificar gimnasta' });
+  } finally {
+    release();
   }
-
-  // Conservar las notas existentes al actualizar campos de perfil
-  tData.gimnastas[idx] = {
-    ...tData.gimnastas[idx],
-    ...updatedFields,
-    id: gymnastId, // prevenir cambio de ID
-    notas: tData.gimnastas[idx].notas // no sobreescribir notas mediante este endpoint
-  };
-
-  await saveTournamentData(tournamentId, tData);
-
-  broadcast(tournamentId, { type: 'GYMNAST_UPDATED', gymnast: tData.gimnastas[idx] });
-
-  res.json({ success: true, gymnast: tData.gimnastas[idx] });
 });
 
 // 9. Eliminar gimnasta (Admin)
 app.delete('/api/tournaments/:tournamentId/gymnasts/:gymnastId', requireAdmin, async (req, res) => {
   const { tournamentId, gymnastId } = req.params;
 
-  const tData = req.tournament;
-  const initialLength = tData.gimnastas.length;
-  tData.gimnastas = tData.gimnastas.filter(g => g.id !== gymnastId);
+  const lock = getTournamentLock(tournamentId);
+  const release = await lock.acquire();
+  try {
+    const tData = await loadTournament(tournamentId);
+    const initialLength = tData.gimnastas.length;
+    tData.gimnastas = tData.gimnastas.filter(g => g.id !== gymnastId);
 
-  if (tData.gimnastas.length === initialLength) {
-    return res.status(404).json({ error: 'Gimnasta no encontrada' });
+    if (tData.gimnastas.length === initialLength) {
+      return res.status(404).json({ error: 'Gimnasta no encontrada' });
+    }
+
+    await saveTournamentData(tournamentId, tData);
+
+    broadcast(tournamentId, { type: 'GYMNAST_DELETED', gymnastId });
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Error al eliminar gimnasta' });
+  } finally {
+    release();
   }
-
-  await saveTournamentData(tournamentId, tData);
-
-  broadcast(tournamentId, { type: 'GYMNAST_DELETED', gymnastId });
-
-  res.json({ success: true });
 });
 // 10. Guardar o actualizar notas (Juez/Admin)
 app.post('/api/tournaments/:tournamentId/score', async (req, res) => {
@@ -666,22 +696,30 @@ app.put('/api/tournaments/:tournamentId/team-discounts', requireAdmin, async (re
   const { tournamentId } = req.params;
   const { groupKey, clubName, descuento } = req.body;
 
-  const tData = req.tournament;
-  if (!tData.descuentosEquipos) {
-    tData.descuentosEquipos = {};
+  const lock = getTournamentLock(tournamentId);
+  const release = await lock.acquire();
+  try {
+    const tData = await loadTournament(tournamentId);
+    if (!tData.descuentosEquipos) {
+      tData.descuentosEquipos = {};
+    }
+    if (!tData.descuentosEquipos[groupKey]) {
+      tData.descuentosEquipos[groupKey] = {};
+    }
+
+    tData.descuentosEquipos[groupKey][clubName] = parseFloat(descuento) || 0;
+
+    await saveTournamentData(tournamentId, tData);
+
+    // Notificar actualización instantánea a todos los clientes
+    broadcast(tournamentId, { type: 'TOURNAMENT_RELOADED', gimnastas: tData.gimnastas });
+
+    res.json({ success: true, descuentosEquipos: tData.descuentosEquipos });
+  } catch (err) {
+    res.status(500).json({ error: 'Error al actualizar descuentos' });
+  } finally {
+    release();
   }
-  if (!tData.descuentosEquipos[groupKey]) {
-    tData.descuentosEquipos[groupKey] = {};
-  }
-
-  tData.descuentosEquipos[groupKey][clubName] = parseFloat(descuento) || 0;
-
-  await saveTournamentData(tournamentId, tData);
-
-  // Notificar actualización instantánea a todos los clientes
-  broadcast(tournamentId, { type: 'TOURNAMENT_RELOADED', gimnastas: tData.gimnastas });
-
-  res.json({ success: true, descuentosEquipos: tData.descuentosEquipos });
 });
 
 // 13. Guardar configuración de turnos (Admin)
@@ -689,54 +727,71 @@ app.put('/api/tournaments/:tournamentId/turnos-config', requireAdmin, async (req
   const { tournamentId } = req.params;
   const { turnosConfig } = req.body;
 
-  const tData = req.tournament;
-  tData.turnosConfig = turnosConfig || [];
+  const lock = getTournamentLock(tournamentId);
+  const release = await lock.acquire();
+  try {
+    const tData = await loadTournament(tournamentId);
+    tData.turnosConfig = turnosConfig || [];
 
-  await saveTournamentData(tournamentId, tData);
+    await saveTournamentData(tournamentId, tData);
 
-  res.json({ success: true, turnosConfig: tData.turnosConfig });
+    res.json({ success: true, turnosConfig: tData.turnosConfig });
+  } catch (err) {
+    res.status(500).json({ error: 'Error al guardar configuración de turnos' });
+  } finally {
+    release();
+  }
 });
 
 // 14. Asignación automática de turnos basada en configuración (Admin)
 app.post('/api/tournaments/:tournamentId/auto-assign-turnos', requireAdmin, async (req, res) => {
   const { tournamentId } = req.params;
-  const tData = req.tournament;
 
-  if (!tData.turnosConfig || !Array.isArray(tData.turnosConfig) || tData.turnosConfig.length === 0) {
-    return res.status(400).json({ error: 'No hay configuración de turnos definida' });
-  }
+  const lock = getTournamentLock(tournamentId);
+  const release = await lock.acquire();
+  try {
+    const tData = await loadTournament(tournamentId);
 
-  let updatedCount = 0;
+    if (!tData.turnosConfig || !Array.isArray(tData.turnosConfig) || tData.turnosConfig.length === 0) {
+      return res.status(400).json({ error: 'No hay configuración de turnos definida' });
+    }
 
-  tData.gimnastas.forEach(g => {
-    // Buscar la primera regla que coincida
-    const matchedRule = tData.turnosConfig.find(rule => {
-      const normalize = (s) => String(s || '').toLowerCase().trim();
-      const ruleNiveles = (rule.niveles || []).map(normalize);
-      const ruleCategorias = (rule.categorias || []).map(normalize);
-      const gNivel = normalize(g.nivel);
-      const gCategoria = normalize(g.categoria);
+    let updatedCount = 0;
 
-      const matchNivel = ruleNiveles.length === 0 || ruleNiveles.some(n => gNivel.includes(n) || n.includes(gNivel));
-      const matchCategoria = ruleCategorias.length === 0 || ruleCategorias.some(c => gCategoria.includes(c) || c.includes(gCategoria));
-      
-      return matchNivel && matchCategoria;
+    tData.gimnastas.forEach(g => {
+      // Buscar la primera regla que coincida
+      const matchedRule = tData.turnosConfig.find(rule => {
+        const normalize = (s) => String(s || '').toLowerCase().trim();
+        const ruleNiveles = (rule.niveles || []).map(normalize);
+        const ruleCategorias = (rule.categorias || []).map(normalize);
+        const gNivel = normalize(g.nivel);
+        const gCategoria = normalize(g.categoria);
+
+        const matchNivel = ruleNiveles.length === 0 || ruleNiveles.some(n => gNivel.includes(n) || n.includes(gNivel));
+        const matchCategoria = ruleCategorias.length === 0 || ruleCategorias.some(c => gCategoria.includes(c) || c.includes(gCategoria));
+        
+        return matchNivel && matchCategoria;
+      });
+
+      if (matchedRule && matchedRule.nombre) {
+        if (g.grupo !== matchedRule.nombre) {
+          g.grupo = matchedRule.nombre;
+          updatedCount++;
+        }
+      }
     });
 
-    if (matchedRule && matchedRule.nombre) {
-      if (g.grupo !== matchedRule.nombre) {
-        g.grupo = matchedRule.nombre;
-        updatedCount++;
-      }
+    if (updatedCount > 0) {
+      await saveTournamentData(tournamentId, tData);
+      broadcast(tournamentId, { type: 'TOURNAMENT_RELOADED', gimnastas: tData.gimnastas });
     }
-  });
 
-  if (updatedCount > 0) {
-    await saveTournamentData(tournamentId, tData);
-    broadcast(tournamentId, { type: 'TOURNAMENT_RELOADED', gimnastas: tData.gimnastas });
+    res.json({ success: true, updatedCount });
+  } catch (err) {
+    res.status(500).json({ error: 'Error al asignar turnos automáticamente' });
+  } finally {
+    release();
   }
-
-  res.json({ success: true, updatedCount });
 });
 
 // 11. Descargar planilla Excel con resultados
