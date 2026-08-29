@@ -76,7 +76,9 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
     };
     const nivelFmt = formatStr(g.nivel);
     const catFmt = formatStr(g.categoria);
-    const key = g.nacimiento ? `${nivelFmt} - ${catFmt} ${g.nacimiento}` : `${nivelFmt} - ${catFmt}`;
+    const isMayor = catFmt.toLowerCase().includes('mayor');
+    const groupingYear = isMayor ? '' : g.nacimiento;
+    const key = groupingYear ? `${nivelFmt} - ${catFmt} ${groupingYear}` : `${nivelFmt} - ${catFmt}`;
     if (!groupedRankings[key]) groupedRankings[key] = [];
 
     let totalScore = 0;
@@ -133,8 +135,17 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
   const activeGroupKey = rotatedGroups[safeGroupIndex] || '';
 
   const availableTurnos = [...new Set(gymnasts.map(g => g.grupo || 'Turno 1'))].filter(Boolean).sort();
-  const allGroups = [...new Set(gymnasts.map(g => g.nacimiento ? `${g.nivel} - ${g.categoria} ${g.nacimiento}` : `${g.nivel} - ${g.categoria}`))].filter(Boolean).sort();
-  
+  const allGroups = [...new Set(gymnasts.map(g => {
+    const formatStr = (str) => {
+      if (!str) return '';
+      return str.trim().toLowerCase().split(/\s+/).map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+    };
+    const nivelFmt = formatStr(g.nivel);
+    const catFmt = formatStr(g.categoria);
+    const isMayor = catFmt.toLowerCase().includes('mayor');
+    const groupingYear = isMayor ? '' : g.nacimiento;
+    return groupingYear ? `${nivelFmt} - ${catFmt} ${groupingYear}` : `${nivelFmt} - ${catFmt}`;
+  }))].filter(Boolean).sort();
   // Obtener gimnastas del grupo actual
   const currentGroupGymnasts = groupedRankings[activeGroupKey] || [];
 

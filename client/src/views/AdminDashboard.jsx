@@ -592,7 +592,9 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
     };
     const nivelFmt = formatStr(g.nivel);
     const catFmt = formatStr(g.categoria);
-    const key = g.nacimiento ? `${nivelFmt} - ${catFmt} ${g.nacimiento}` : `${nivelFmt} - ${catFmt}`;
+    const isMayor = catFmt.toLowerCase().includes('mayor');
+    const groupingYear = isMayor ? '' : g.nacimiento;
+    const key = groupingYear ? `${nivelFmt} - ${catFmt} ${groupingYear}` : `${nivelFmt} - ${catFmt}`;
     if (!groupedRankings[key]) groupedRankings[key] = [];
 
     // Calcular totales
@@ -639,7 +641,8 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
     // Agrupar por año
     const yearsGroup = {};
     members.forEach(m => {
-      const yr = m.nacimiento || 'S/A';
+      const isMayor = m.categoria && m.categoria.toLowerCase().includes('mayor');
+      const yr = isMayor ? 'Mayor (Todas)' : (m.nacimiento || 'S/A');
       if (!yearsGroup[yr]) yearsGroup[yr] = [];
       yearsGroup[yr].push(m);
     });
