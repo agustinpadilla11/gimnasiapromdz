@@ -17,6 +17,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [localIp, setLocalIp] = useState('');
   
   // Estados para agregar/editar gimnasta
   const [editingGymnast, setEditingGymnast] = useState(null);
@@ -42,6 +43,10 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
   const [editingTeamDiscount, setEditingTeamDiscount] = useState(null); // { groupKey, clubName }
   const [teamDiscountValue, setTeamDiscountValue] = useState('0.0');
 
+  // Estados para descuento individual All-Around
+  const [editingGymnastDiscount, setEditingGymnastDiscount] = useState(null); // { gymnastId, gymnastName }
+  const [gymnastDiscountValue, setGymnastDiscountValue] = useState('0.0');
+
   // Efecto visual para destacar filas actualizadas
   const [flashGymnastId, setFlashGymnastId] = useState(null);
   const [flashApparatus, setFlashApparatus] = useState('');
@@ -53,8 +58,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
   const [turnoFiles, setTurnoFiles] = useState([]);
   const [selectedTurno, setSelectedTurno] = useState('Todos');
 
-  // Estado para buffers (Semáforos)
-  const [buffers, setBuffers] = useState({});
+  const [monitorApparatus, setMonitorApparatus] = useState('Todos');
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
@@ -91,6 +95,14 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
         setTournament(data);
         setGymnasts(data.gimnastas || []);
         setTurnosConfig(data.turnosConfig || []);
+
+        try {
+          const ipRes = await fetch(`${apiBase}/system/local-ip`);
+          if (ipRes.ok) {
+            const ipData = await ipRes.json();
+            setLocalIp(ipData.ip);
+          }
+        } catch (e) {}
       } else {
         if (res.status === 404 || res.status === 401 || res.status === 403) {
           logout();
@@ -148,17 +160,6 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
           setTimeout(() => {
             setScoreNotifications(prev => prev.filter(n => n.id !== newNotif.id));
           }, 10000);
-        } else if (msg.type === 'BUFFER_UPDATED') {
-          setBuffers(prev => ({
-            ...prev,
-            [`${msg.gymnastId}-${msg.aparato}`]: msg.buffer || {}
-          }));
-        } else if (msg.type === 'BUFFER_CLEARED') {
-          setBuffers(prev => {
-            const copy = { ...prev };
-            delete copy[`${msg.gymnastId}-${msg.aparato}`];
-            return copy;
-          });
         }
       } catch (e) {
         console.error('Error al procesar mensaje de WebSocket:', e);
@@ -492,6 +493,43 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
     }
   };
 
+  const handleOpenGymnastDiscountModal = (gymnastId, gymnastName, currentDiscount) => {
+    setEditingGymnastDiscount({ gymnastId, gymnastName });
+    setGymnastDiscountValue(String(currentDiscount || '0.0'));
+  };
+
+  const handleSaveGymnastDiscount = async () => {
+    if (!editingGymnastDiscount) return;
+    setLoading(true);
+    setError('');
+
+    try {
+      const res = await fetch(`${apiBase}/tournaments/${auth.tournamentId}/gymnasts/${editingGymnastDiscount.gymnastId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-pin': auth.pin
+        },
+        body: JSON.stringify({
+          descuentoAllAround: parseFloat(gymnastDiscountValue) || 0
+        })
+      });
+
+      if (res.ok) {
+        showFlashNotification('Descuento individual guardado y retransmitido.');
+        setEditingGymnastDiscount(null);
+        fetchTournamentData();
+      } else {
+        const data = await res.json();
+        setError(data.error || 'No se pudo guardar el descuento individual.');
+      }
+    } catch (err) {
+      setError('Error al enviar el descuento individual.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getBaseScoreForGymnast = (gymnast, aparato) => {
     const isGamApparatus = aparato && (aparato.includes('(M)') || ['Arzones', 'Anillas', 'Barra Fija'].includes(aparato));
     const isGam = tournament && (tournament.modalidad === 'GAM' || (tournament.modalidad === 'Ambos' && isGamApparatus));
@@ -611,6 +649,10 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
         scores[ap] = null;
       }
     });
+    if (hasScores) {
+      const descuentoAA = parseFloat(g.descuentoAllAround) || 0;
+      totalScore = totalScore - descuentoAA;
+    }
 
     groupedRankings[key].push({
       ...g,
@@ -806,6 +848,23 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
             </span>
           </div>
           <h1 style={{ fontSize: '1.6rem', letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>{tournament.nombre}</h1>
+          {localIp && (
+            <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Red Local (Juezas):</span>
+              <span style={{ 
+                fontFamily: 'var(--font-mono)', 
+                fontSize: '0.9rem', 
+                fontWeight: '700', 
+                color: 'var(--accent-info)',
+                background: 'rgba(56, 189, 248, 0.1)',
+                padding: '4px 8px',
+                borderRadius: '4px',
+                userSelect: 'all'
+              }}>
+                http://{localIp}:3000
+              </span>
+            </div>
+          )}
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
@@ -915,13 +974,6 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
         >
           <Trophy size={18} style={{ verticalAlign: 'middle', marginRight: '6px' }} />
           Clasificaciones y Podios
-        </button>
-        <button 
-          onClick={() => setActiveTab('semaforos')} 
-          className={`tab-btn ${activeTab === 'semaforos' ? 'active' : ''}`}
-        >
-          <Tv size={18} style={{ verticalAlign: 'middle', marginRight: '6px' }} />
-          Panel de Semáforos
         </button>
       </div>
 
@@ -1034,13 +1086,36 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
             <h3 style={{ fontSize: '1.2rem' }}>Puntuaciones en Tiempo Real</h3>
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Aparato:</span>
+                <select
+                  value={monitorApparatus}
+                  onChange={(e) => setMonitorApparatus(e.target.value)}
+                  className="input-field"
+                  style={{
+                    width: '160px',
+                    padding: '8px 12px',
+                    background: 'var(--bg-input)',
+                    color: 'var(--text-primary)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '8px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="Todos">General (All-Around)</option>
+                  {tournament.aparatos.map(ap => (
+                    <option key={ap} value={ap}>{ap}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                 <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Ordenar por:</span>
                 <select
                   value={orderBy}
                   onChange={(e) => setOrderBy(e.target.value)}
                   className="input-field"
                   style={{
-                    width: '150px',
+                    width: '120px',
                     padding: '8px 12px',
                     background: 'var(--bg-input)',
                     color: 'var(--text-primary)',
@@ -1057,7 +1132,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                 type="text"
                 placeholder="Filtrar por gimnasta o club..."
                 className="input-field"
-                style={{ width: '260px', padding: '8px 12px' }}
+                style={{ width: '220px', padding: '8px 12px' }}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -1075,10 +1150,24 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                   <th>Club / Institución</th>
                   <th>Categoría</th>
                   <th>Nivel</th>
-                  {tournament.aparatos.map(ap => (
-                    <th key={ap} style={{ textAlign: 'center' }}>{ap}</th>
-                  ))}
-                  <th style={{ textAlign: 'center', background: 'var(--bg-th)', color: 'var(--accent-gold)' }}>TOTAL</th>
+                  {monitorApparatus === 'Todos' ? (
+                    <>
+                      {tournament.aparatos.map(ap => (
+                        <th key={ap} style={{ textAlign: 'center' }}>{ap}</th>
+                      ))}
+                      <th style={{ textAlign: 'center', background: 'var(--bg-th)', color: 'var(--accent-gold)' }}>TOTAL</th>
+                    </>
+                  ) : (
+                    <>
+                      <th style={{ textAlign: 'center' }}>J1</th>
+                      <th style={{ textAlign: 'center' }}>J2</th>
+                      <th style={{ textAlign: 'center' }}>J3</th>
+                      <th style={{ textAlign: 'center' }}>J4</th>
+                      <th style={{ textAlign: 'center', color: 'var(--accent-info)' }}>Nota D</th>
+                      <th style={{ textAlign: 'center', color: 'var(--accent-danger)' }}>Desc.</th>
+                      <th style={{ textAlign: 'center', background: 'var(--bg-th)', color: 'var(--accent-primary)' }}>FINAL</th>
+                    </>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -1095,7 +1184,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                     <React.Fragment key={g.id}>
                       {showGroupDivider && (
                         <tr style={{ background: 'rgba(59, 130, 246, 0.08)', height: '45px' }}>
-                          <td colSpan={5 + tournament.aparatos.length} style={{ fontWeight: '800', color: 'var(--accent-primary)', fontSize: '0.9rem', letterSpacing: '0.05em', paddingLeft: '15px' }}>
+                          <td colSpan={monitorApparatus === 'Todos' ? 5 + tournament.aparatos.length : 11} style={{ fontWeight: '800', color: 'var(--accent-primary)', fontSize: '0.9rem', letterSpacing: '0.05em', paddingLeft: '15px' }}>
                             {orderBy === 'nivel'
                               ? `🏆 NIVEL: ${String(g.nivel || 'SIN NIVEL').toUpperCase()}`
                               : `📅 TURNO: ${String(g.grupo || 'TURNO 1').toUpperCase()}`}
@@ -1107,52 +1196,85 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                         <td style={{ color: 'var(--text-secondary)' }}>{g.institucion}</td>
                         <td>{g.categoria}</td>
                         <td>{g.nivel}</td>
-                        {tournament.aparatos.map(ap => {
-                          const scoreObj = g.notas?.[ap];
-                          const scoreVal = scoreObj?.final;
-                          
-                          if (scoreVal !== undefined && scoreVal !== null) {
-                            totalScore += parseFloat(scoreVal);
-                            hasScores = true;
-                          }
+                        
+                        {monitorApparatus === 'Todos' ? (
+                          <>
+                            {tournament.aparatos.map(ap => {
+                              const scoreObj = g.notas?.[ap];
+                              const scoreVal = scoreObj?.final;
+                              
+                              if (scoreVal !== undefined && scoreVal !== null) {
+                                totalScore += parseFloat(scoreVal);
+                                hasScores = true;
+                              }
 
-                          const isFlashing = flashGymnastId === g.id && flashApparatus === ap;
+                              const isFlashing = flashGymnastId === g.id && flashApparatus === ap;
 
-                          return (
-                            <td
-                              key={ap}
-                              onClick={() => handleOpenScoreModal(g, ap)}
-                              className={isFlashing ? 'flash-update' : ''}
-                              style={{
-                                textAlign: 'center',
-                                fontFamily: 'var(--font-mono)',
-                                fontWeight: '700',
-                                cursor: 'pointer',
-                                color: scoreVal !== undefined ? 'var(--text-primary)' : 'var(--text-muted)',
-                                background: scoreVal !== undefined ? 'rgba(59, 130, 246, 0.05)' : 'none',
-                                borderRight: '1px solid rgba(255,255,255,0.02)',
-                                transition: 'all 0.3s',
-                                position: 'relative',
-                                padding: '12px 8px'
-                              }}
-                              title="Haz clic para modificar la nota"
-                            >
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <span>{scoreVal !== undefined ? parseFloat(scoreVal).toFixed(3) : '-'}</span>
-                              </div>
+                              return (
+                                <td
+                                  key={ap}
+                                  onClick={() => handleOpenScoreModal(g, ap)}
+                                  className={isFlashing ? 'flash-update' : ''}
+                                  style={{
+                                    textAlign: 'center',
+                                    fontFamily: 'var(--font-mono)',
+                                    fontWeight: '700',
+                                    cursor: 'pointer',
+                                    color: scoreVal !== undefined ? 'var(--text-primary)' : 'var(--text-muted)',
+                                    background: scoreVal !== undefined ? 'rgba(59, 130, 246, 0.05)' : 'none',
+                                    borderRight: '1px solid rgba(255,255,255,0.02)',
+                                    transition: 'all 0.3s',
+                                    position: 'relative',
+                                    padding: '12px 8px'
+                                  }}
+                                  title="Haz clic para modificar la nota"
+                                >
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <span>{scoreVal !== undefined ? parseFloat(scoreVal).toFixed(3) : '-'}</span>
+                                  </div>
+                                </td>
+                              );
+                            })}
+                            <td style={{
+                              textAlign: 'center',
+                              fontFamily: 'var(--font-mono)',
+                              fontWeight: '800',
+                              fontSize: '1rem',
+                              color: 'var(--accent-gold)',
+                              background: 'rgba(226, 177, 60, 0.05)'
+                            }}>
+                              {hasScores ? totalScore.toFixed(3) : '-'}
                             </td>
-                          );
-                        })}
-                        <td style={{
-                          textAlign: 'center',
-                          fontFamily: 'var(--font-mono)',
-                          fontWeight: '800',
-                          fontSize: '1rem',
-                          color: 'var(--accent-gold)',
-                          background: 'rgba(226, 177, 60, 0.05)'
-                        }}>
-                          {hasScores ? totalScore.toFixed(3) : '-'}
-                        </td>
+                          </>
+                        ) : (
+                          <>
+                            {[0, 1, 2, 3].map(j => {
+                              const val = g.notas?.[monitorApparatus]?.jueces?.[j];
+                              return (
+                                <td key={j} style={{ textAlign: 'center', fontFamily: 'var(--font-mono)' }}>
+                                  {val !== undefined && val !== null ? parseFloat(val).toFixed(3) : '-'}
+                                </td>
+                              );
+                            })}
+                            <td style={{ textAlign: 'center', fontFamily: 'var(--font-mono)', color: 'var(--accent-info)', fontWeight: '600' }}>
+                              {g.notas?.[monitorApparatus]?.notaD !== undefined ? parseFloat(g.notas[monitorApparatus].notaD).toFixed(3) : '-'}
+                            </td>
+                            <td style={{ textAlign: 'center', fontFamily: 'var(--font-mono)', color: 'var(--accent-danger)' }}>
+                              {g.notas?.[monitorApparatus]?.descuentosMesa !== undefined ? `-${parseFloat(g.notas[monitorApparatus].descuentosMesa).toFixed(3)}` : '-'}
+                            </td>
+                            <td style={{
+                              textAlign: 'center',
+                              fontFamily: 'var(--font-mono)',
+                              fontWeight: '800',
+                              fontSize: '1rem',
+                              color: 'var(--accent-primary)',
+                              background: 'rgba(59, 130, 246, 0.05)',
+                              cursor: 'pointer'
+                            }} onClick={() => handleOpenScoreModal(g, monitorApparatus)}>
+                              {g.notas?.[monitorApparatus]?.final !== undefined ? parseFloat(g.notas[monitorApparatus].final).toFixed(3) : '-'}
+                            </td>
+                          </>
+                        )}
                       </tr>
                     </React.Fragment>
                   );
@@ -1160,7 +1282,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
 
                 {filteredGymnastList.length === 0 && (
                   <tr>
-                    <td colSpan={5 + tournament.aparatos.length} style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '30px' }}>
+                    <td colSpan={monitorApparatus === 'Todos' ? 5 + tournament.aparatos.length : 11} style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '30px' }}>
                       No se encontraron gimnastas.
                     </td>
                   </tr>
@@ -1367,6 +1489,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                                 {tournament.aparatos.map(ap => (
                                   <th key={ap} style={{ textAlign: 'center', fontSize: '0.75rem', padding: '10px 4px' }}>{ap.substring(0,3)}</th>
                                 ))}
+                                <th style={{ textAlign: 'center', padding: '10px 6px' }}>Desc.</th>
                                 <th style={{ textAlign: 'center', padding: '10px 6px' }}>Total</th>
                               </tr>
                             </thead>
@@ -1382,13 +1505,45 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                                       <span style={{ fontWeight: '600', fontFamily: 'var(--font-mono)' }}>{gym.podioAnio}</span>
                                     )}
                                   </td>
-                                  <td style={{ fontWeight: '600', padding: '10px 8px' }}>{gym.nombre}</td>
+                                  <td style={{ fontWeight: '600', padding: '10px 8px' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                      <span>{gym.nombre}</span>
+                                      {parseFloat(gym.descuentoAllAround) > 0 && (
+                                        <span style={{ fontSize: '0.75rem', color: 'var(--accent-danger)', fontWeight: 'normal' }}>
+                                          Bruto: {(parseFloat(gym.totalScore) + parseFloat(gym.descuentoAllAround)).toFixed(3)}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </td>
                                   <td style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', padding: '10px 8px' }}>{gym.institucion}</td>
                                   {tournament.aparatos.map(ap => (
                                     <td key={ap} style={{ textAlign: 'center', fontFamily: 'var(--font-mono)', fontSize: '0.85rem', padding: '10px 4px' }}>
                                       {gym.scores[ap] !== null ? gym.scores[ap].toFixed(3) : '-'}
                                     </td>
                                   ))}
+                                  <td style={{ textAlign: 'center', padding: '10px 6px' }}>
+                                    <button
+                                      onClick={() => handleOpenGymnastDiscountModal(gym.id, gym.nombre, gym.descuentoAllAround)}
+                                      className="btn"
+                                      style={{
+                                        padding: '4px 8px',
+                                        fontSize: '0.8rem',
+                                        fontWeight: '700',
+                                        color: parseFloat(gym.descuentoAllAround) > 0 ? 'var(--accent-danger)' : 'var(--text-secondary)',
+                                        borderColor: parseFloat(gym.descuentoAllAround) > 0 ? 'var(--accent-danger)' : 'var(--border-color)',
+                                        background: parseFloat(gym.descuentoAllAround) > 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(255,255,255,0.02)',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        borderRadius: '6px',
+                                        cursor: 'pointer'
+                                      }}
+                                      title="Aplicar o editar descuento manual a esta gimnasta"
+                                    >
+                                      <Edit size={12} />
+                                      {parseFloat(gym.descuentoAllAround) > 0 ? `-${parseFloat(gym.descuentoAllAround).toFixed(1)}` : '0.0'}
+                                    </button>
+                                  </td>
                                   <td style={{
                                     textAlign: 'center',
                                     fontFamily: 'var(--font-mono)',
@@ -1604,63 +1759,6 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
           {Object.keys(groupedRankings).length === 0 && (
             <div className="glass-panel" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
               No hay gimnastas inscritas en el torneo para generar clasificaciones.
-            </div>
-          )}
-        </div>
-      )}
-
-      {activeTab === 'semaforos' && (
-        <div>
-          <h2 style={{ marginBottom: '20px' }}>Panel de Semáforos (Buffers de Jueces)</h2>
-          {gymnasts.length === 0 ? (
-            <p>No hay gimnastas registrados.</p>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
-              {gymnasts.map(g => {
-                const hasPendingBuffers = tournament.aparatos.some(ap => {
-                  const key = `${g.id}-${ap}`;
-                  return buffers[key] && Object.keys(buffers[key]).length > 0;
-                });
-                
-                if (!hasPendingBuffers) return null;
-
-                return (
-                  <div key={g.id} className="glass-panel" style={{ padding: '20px', background: 'var(--bg-secondary)' }}>
-                    <h3 style={{ fontSize: '1.2rem', marginBottom: '10px' }}>{g.nombre}</h3>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '15px' }}>{g.institucion}</p>
-                    
-                    {tournament.aparatos.map(ap => {
-                      const key = `${g.id}-${ap}`;
-                      const buffer = buffers[key];
-                      if (!buffer || Object.keys(buffer).length === 0) return null;
-
-                      return (
-                        <div key={ap} style={{ marginBottom: '10px' }}>
-                          <h4 style={{ fontSize: '0.9rem', color: 'var(--accent-primary)', marginBottom: '5px' }}>{ap}</h4>
-                          <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
-                            {['Juez 1', 'Juez 2', 'Juez 3', 'Juez 4', 'Juez 5', 'Juez 6'].map(j => {
-                              const submitted = buffer[j];
-                              if (!submitted) return null;
-                              return (
-                                <div key={j} style={{
-                                  padding: '4px 8px',
-                                  borderRadius: '6px',
-                                  background: 'rgba(16, 185, 129, 0.2)',
-                                  border: '1px solid var(--accent-success)',
-                                  color: 'var(--accent-success)',
-                                  fontSize: '0.8rem'
-                                }}>
-                                  {j}: {buffer[j].nota}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              })}
             </div>
           )}
         </div>
@@ -2076,7 +2174,55 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
         </div>
       )}
 
+      {/* MODAL 4: DESCUENTO INDIVIDUAL ALL-AROUND */}
+      {editingGymnastDiscount && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center',
+          alignItems: 'center', zIndex: 1000, padding: '20px'
+        }}>
+          <div className="glass-panel" style={{
+            width: '100%', maxWidth: '400px', padding: '30px',
+            background: 'var(--bg-secondary)', border: '1px solid var(--border-color-hover)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ fontSize: '1.2rem' }}>Descuento All-Around</h3>
+              <button onClick={() => setEditingGymnastDiscount(null)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                <X size={20} />
+              </button>
+            </div>
 
+            <div style={{ marginBottom: '20px' }}>
+              <h4 style={{ fontSize: '1.1rem', color: '#fff' }}>{editingGymnastDiscount.gymnastName}</h4>
+              <p style={{ color: 'var(--accent-primary)', fontSize: '0.85rem', fontWeight: 'bold' }}>Descuento sobre Nota Final Individual</p>
+            </div>
+
+            <div className="form-group">
+              <label>Puntos a descontar:</label>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                max="50"
+                placeholder="ej. 0.5"
+                className="input-field"
+                value={gymnastDiscountValue}
+                onChange={(e) => setGymnastDiscountValue(e.target.value)}
+                autoFocus
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', marginTop: '25px' }}>
+              <button onClick={handleSaveGymnastDiscount} className="btn btn-primary" style={{ flex: 1 }} disabled={loading}>
+                {loading ? 'Guardando...' : 'Aplicar Descuento'}
+              </button>
+              <button onClick={() => setEditingGymnastDiscount(null)} className="btn btn-secondary" style={{ flex: 1 }}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
 
 

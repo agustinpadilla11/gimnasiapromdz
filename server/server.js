@@ -22,6 +22,7 @@ import {
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import os from 'os';
 
 const __filenameFederacion = fileURLToPath(import.meta.url);
 const __dirnameFederacion = path.dirname(__filenameFederacion);
@@ -129,6 +130,26 @@ const requireAuth = async (req, res, next) => {
 
 // --- RUTAS DE LA API ---
 
+// Endpoint para obtener la IP Local del servidor (útil para uso sin internet)
+app.get('/api/system/local-ip', (req, res) => {
+  const nets = os.networkInterfaces();
+  let localIp = 'localhost'; // Fallback
+  
+  for (const name of Object.keys(nets)) {
+    for (const net of nets[name]) {
+      // Ignorar interfaces internas (loopback) y direcciones que no sean IPv4
+      if (net.family === 'IPv4' && !net.internal) {
+        // En Windows puede haber varias (Wi-Fi, Ethernet, VirtualBox).
+        // Si encontramos una tipo 192.168.x.x o 10.x.x.x, la priorizamos.
+        if (net.address.startsWith('192.168.') || net.address.startsWith('10.')) {
+          return res.json({ ip: net.address });
+        }
+        localIp = net.address;
+      }
+    }
+  }
+  res.json({ ip: localIp });
+});
 // 0. Autenticar acceso federativo
 app.post('/api/auth/federacion', (req, res) => {
   const { username, password } = req.body;
