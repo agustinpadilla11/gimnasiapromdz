@@ -12,6 +12,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
   const [searchQuery, setSearchQuery] = useState('');
   const [orderBy, setOrderBy] = useState('grupo'); // 'grupo' | 'nivel'
   const [turnosConfig, setTurnosConfig] = useState([]);
+  const [buffers, setBuffers] = useState({});
   
   // Estados de carga e informes
   const [loading, setLoading] = useState(false);
@@ -95,6 +96,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
         setTournament(data);
         setGymnasts(data.gimnastas || []);
         setTurnosConfig(data.turnosConfig || []);
+        setBuffers(data.bufferNotas || {});
 
         try {
           const ipRes = await fetch(`${apiBase}/system/local-ip`);
