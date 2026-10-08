@@ -1057,14 +1057,14 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
               <div style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '6px',
-                padding: '8px 24px',
+                gap: '8px',
+                padding: '12px 36px',
                 borderRadius: '999px',
                 background: 'rgba(59, 130, 246, 0.2)',
-                border: '1.5px solid var(--accent-primary)',
+                border: '2px solid var(--accent-primary)',
                 color: '#60a5fa',
-                fontWeight: '800',
-                fontSize: '1.5rem',
+                fontWeight: '900',
+                fontSize: '2.5rem',
                 textTransform: 'uppercase'
               }}>
                 Aparato: {liveReveal.aparato}
@@ -1242,17 +1242,17 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
               <div style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '8px',
-                padding: '10px 30px',
+                gap: '10px',
+                padding: '14px 40px',
                 borderRadius: '999px',
                 background: 'rgba(59, 130, 246, 0.2)',
-                border: '2px solid var(--accent-primary)',
+                border: '3px solid var(--accent-primary)',
                 color: '#60a5fa',
                 fontWeight: '900',
-                fontSize: '1.8rem',
+                fontSize: '3.2rem',
                 letterSpacing: '0.05em',
                 textTransform: 'uppercase',
-                boxShadow: '0 0 20px rgba(59, 130, 246, 0.3)'
+                boxShadow: '0 0 25px rgba(59, 130, 246, 0.4)'
               }}>
                 Aparato: {activeFlash.aparato}
               </div>
