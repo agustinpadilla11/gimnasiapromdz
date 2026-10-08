@@ -248,8 +248,13 @@ export const exportTournamentToExcel = (tournament, sortBy = 'grupo') => {
     let totalScore = 0;
     let hasScores = false;
     const scores = {};
+    const is1BGroup = key.toLowerCase().replace(/\s+/g, '').includes('1b');
     
     aparatos.forEach(ap => {
+      if (is1BGroup) {
+        const name = ap.toLowerCase();
+        if (!name.includes('salto') && !name.includes('suelo')) return;
+      }
       const note = g.notas && g.notas[ap]?.final;
       if (note !== undefined && note !== null) {
         scores[ap] = parseFloat(note);
@@ -379,11 +384,22 @@ export const exportTournamentToExcel = (tournament, sortBy = 'grupo') => {
   const podiumWS = XLSX.utils.aoa_to_sheet(podiumRows);
   XLSX.utils.book_append_sheet(workbook, podiumWS, 'Podio por Año');
 
-  // 4. Equipo Podio (Mejores 3 notas por club en cada aparato)
-  // Agrupar gimnastas por Nivel, Categoría y Club
+  // 4. Equipo Podio (Mejores notas por club en cada aparato - Categoría completa sin división por edad)
+  const minGimnastasEquipo = tournament?.configuracion?.equipoMinGimnastas ?? (tournament?.id === 'ejemplo-regional-4874' ? 6 : 3);
+  const maxGimnastasEquipo = tournament?.configuracion?.equipoMaxGimnastas ?? (tournament?.id === 'ejemplo-regional-4874' ? 12 : Infinity);
+  const mejoresNotasEquipo = tournament?.configuracion?.equipoMejoresNotas ?? (tournament?.id === 'ejemplo-regional-4874' ? 6 : 3);
+
+  const formatStr = (str) => {
+    if (!str) return '';
+    return str.trim().toLowerCase().split(/\s+/).map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+  };
+
+  // Agrupar gimnastas por Nivel, Categoría (completa, sin división por edad) y Club
   const clubGroups = {};
   sortedGimnastas.forEach(g => {
-    const key = `${g.nivel}_${g.categoria}`;
+    const nivelFmt = formatStr(g.nivel);
+    const catFmt = formatStr(g.categoria);
+    const key = `${nivelFmt}_${catFmt}`;
     if (!clubGroups[key]) clubGroups[key] = {};
     if (!clubGroups[key][g.institucion]) clubGroups[key][g.institucion] = [];
     clubGroups[key][g.institucion].push(g);
@@ -393,34 +409,46 @@ export const exportTournamentToExcel = (tournament, sortBy = 'grupo') => {
     ['NIVEL', 'CATEGORÍA', 'CLUB / INSTITUCIÓN']
   ];
   aparatos.forEach(ap => teamRows[0].push(ap.toUpperCase()));
-  teamRows[0].push('TOTAL EQUIPO', 'PUESTO');
+  teamRows[0].push(`TOTAL EQUIPO (MEJORES ${mejoresNotasEquipo})`, 'PUESTO');
 
   Object.keys(clubGroups).sort().forEach(groupKey => {
     const [nivel, categoria] = groupKey.split('_');
     const clubs = clubGroups[groupKey];
     const clubResults = [];
+    const is1BGroup = `${nivel} - ${categoria}`.toLowerCase().replace(/\s+/g, '').includes('1b');
 
     Object.keys(clubs).forEach(clubName => {
       const members = clubs[clubName];
+      if (members.length < minGimnastasEquipo) return;
       let totalEquipo = 0;
       const scoresPorAparato = {};
+      const eligibleMembers = members.slice(0, maxGimnastasEquipo);
 
       aparatos.forEach(ap => {
+        if (is1BGroup) {
+          const name = ap.toLowerCase();
+          if (!name.includes('salto') && !name.includes('suelo')) {
+            scoresPorAparato[ap] = '';
+            return;
+          }
+        }
+
         // Obtener notas de todos los miembros en este aparato y ordenar de mayor a menor
-        const notes = members
+        const notes = eligibleMembers
           .map(m => m.notas && m.notas[ap]?.final !== undefined ? parseFloat(m.notas[ap].final) : null)
-          .filter(n => n !== null)
+          .filter(n => n !== null && n !== undefined && !isNaN(n))
           .sort((a, b) => b - a);
         
-        // Sumar las 3 mejores notas
-        const best3 = notes.slice(0, 3);
-        const sumAparato = best3.reduce((acc, curr) => acc + curr, 0);
+        // Sumar las mejores notas
+        const bestScores = notes.slice(0, mejoresNotasEquipo);
+        const sumAparato = bestScores.reduce((acc, curr) => acc + curr, 0);
         scoresPorAparato[ap] = sumAparato > 0 ? parseFloat(sumAparato.toFixed(3)) : 0;
-        totalEquipo += scoresPorAparato[ap];
+        totalEquipo += (typeof scoresPorAparato[ap] === 'number' ? scoresPorAparato[ap] : 0);
       });
 
-      // Restar descuento de equipo si existe
-      const descuento = tournament.descuentosEquipos?.[`${nivel} - ${categoria}`]?.[clubName] || 0;
+      // Restar descuento de equipo si existe para la categoría completa
+      const descuento = tournament.descuentosEquipos?.[`${nivel} - ${categoria}`]?.[clubName] || 
+                         tournament.descuentosEquipos?.[groupKey]?.[clubName] || 0;
       const totalConDescuento = parseFloat(Math.max(0, totalEquipo - descuento).toFixed(3));
 
       clubResults.push({

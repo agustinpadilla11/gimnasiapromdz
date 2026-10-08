@@ -15,6 +15,7 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
   const [selectedGroups, setSelectedGroups] = useState([]);
   const [showGroupDropdown, setShowGroupDropdown] = useState(false);
   const [viewMode, setViewMode] = useState('individual'); // 'individual' | 'equipos'
+  const [activeTeamIndex, setActiveTeamIndex] = useState(0);
   
   // Modo de proyección y última calificación
   const [projectionMode, setProjectionMode] = useState(urlApparatus ? 'ultima' : 'carrusel');
@@ -22,7 +23,34 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
 
   // Estado para la revelación dramática de puntuaciones en vivo
   const [liveReveal, setLiveReveal] = useState(null);
-  const [scoreNotifications, setScoreNotifications] = useState([]);
+  
+  // Cola secuencial de notas flash para evitar solapamientos
+  const [flashQueue, setFlashQueue] = useState([]);
+  const [activeFlash, setActiveFlash] = useState(null);
+  const flashTimerRef = useRef(null);
+
+  // Helper para formatear nivel (distinguiendo Nivel 1A, Nivel 1B o Nivel 2)
+  const formatNivelDisplay = (gymnast) => {
+    if (!gymnast) return '';
+    const nivelStr = (gymnast.nivel || '').toString().trim();
+    const catStr = (gymnast.categoria || '').toString().trim();
+    const grupoStr = (gymnast.grupo || '').toString().trim();
+    const combined = `${nivelStr} ${catStr} ${grupoStr}`.toLowerCase().replace(/\s+/g, ' ');
+
+    if (combined.includes('1a') || combined.includes('1 a')) {
+      return 'Nivel 1A';
+    }
+    if (combined.includes('1b') || combined.includes('1 b')) {
+      return 'Nivel 1B';
+    }
+    if (combined.includes('nivel 1') || combined.includes('n1') || nivelStr === '1') {
+      return 'Nivel 1';
+    }
+    if (combined.includes('nivel 2') || combined.includes('n2') || combined.includes('2')) {
+      return 'Nivel 2';
+    }
+    return nivelStr ? `Nivel ${nivelStr}` : 'Nivel 1';
+  };
 
   // Pantalla completa
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -134,22 +162,35 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
   const safeGroupIndex = activeGroupIndex >= rotatedGroups.length ? 0 : activeGroupIndex;
   const activeGroupKey = rotatedGroups[safeGroupIndex] || '';
 
+  const formatStr = (str) => {
+    if (!str) return '';
+    return str.trim().toLowerCase().split(/\s+/).map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+  };
+  const getBaseCategory = (g) => `${formatStr(g.nivel)} - ${formatStr(g.categoria)}`;
+
+  // Categorías completas para equipos (sin división por edad ni año)
+  const allTeamCategories = [...new Set(filteredGymnastsByTurno.map(g => getBaseCategory(g)))].filter(Boolean).sort();
+  const rotatedTeamCategories = selectedGroups.length > 0
+    ? allTeamCategories.filter(cat => selectedGroups.some(sg => sg.startsWith(cat) || cat.startsWith(sg)))
+    : allTeamCategories;
+
+  const safeTeamIndex = activeTeamIndex >= rotatedTeamCategories.length ? 0 : activeTeamIndex;
+  const activeTeamCategory = rotatedTeamCategories[safeTeamIndex] || allTeamCategories[0] || '';
+
   const availableTurnos = [...new Set(gymnasts.map(g => g.grupo || 'Turno 1'))].filter(Boolean).sort();
   const allGroups = [...new Set(gymnasts.map(g => {
-    const formatStr = (str) => {
-      if (!str) return '';
-      return str.trim().toLowerCase().split(/\s+/).map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-    };
     const nivelFmt = formatStr(g.nivel);
     const catFmt = formatStr(g.categoria);
     const isMayor = catFmt.toLowerCase().includes('mayor');
     const groupingYear = isMayor ? '' : g.nacimiento;
     return groupingYear ? `${nivelFmt} - ${catFmt} ${groupingYear}` : `${nivelFmt} - ${catFmt}`;
   }))].filter(Boolean).sort();
+
   // Obtener gimnastas del grupo actual
   const currentGroupGymnasts = groupedRankings[activeGroupKey] || [];
 
-  const is1BGroup = activeGroupKey && activeGroupKey.toLowerCase().replace(/\s+/g, '').includes('1b');
+  const activeDisplayKey = viewMode === 'individual' ? activeGroupKey : activeTeamCategory;
+  const is1BGroup = activeDisplayKey && activeDisplayKey.toLowerCase().replace(/\s+/g, '').includes('1b');
   const displayApparatuses = tournament ? tournament.aparatos.filter(ap => {
     if (is1BGroup) {
       const name = ap.toLowerCase();
@@ -158,19 +199,15 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
     return true;
   }) : [];
 
-  const getBaseCategoryKey = (key) => {
-    return key.replace(/\s+\d{4}$/, '').trim();
-  };
+  // Obtener ranking por equipos (se toma la CATEGORÍA COMPLETA, sin división por edad)
+  const minGimnastasEquipo = tournament?.configuracion?.equipoMinGimnastas ?? (tournament?.id === 'ejemplo-regional-4874' ? 6 : 3);
+  const maxGimnastasEquipo = tournament?.configuracion?.equipoMaxGimnastas ?? (tournament?.id === 'ejemplo-regional-4874' ? 12 : Infinity);
+  const mejoresNotasEquipo = tournament?.configuracion?.equipoMejoresNotas ?? (tournament?.id === 'ejemplo-regional-4874' ? 6 : 3);
 
-  // Obtener ranking por equipos del grupo actual (agrupado por categoría base sin año)
-  const getTeamRankings = (groupKey) => {
-    const baseKey = getBaseCategoryKey(groupKey);
-    const members = [];
-    Object.keys(groupedRankings).forEach(k => {
-      if (getBaseCategoryKey(k) === baseKey) {
-        members.push(...groupedRankings[k]);
-      }
-    });
+  const getTeamRankings = (baseCategory) => {
+    if (!baseCategory) return [];
+    // En equipos participan todas las gimnastas de la categoría completa (sin filtro por edad)
+    const members = filteredGymnastsByTurno.filter(g => getBaseCategory(g) === baseCategory);
 
     const clubMembers = {};
     members.forEach(m => {
@@ -181,14 +218,15 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
     const clubResults = [];
     Object.keys(clubMembers).forEach(clubName => {
       const clMembers = clubMembers[clubName];
-      if (clMembers.length < 3) return;
+      if (clMembers.length < minGimnastasEquipo) return;
       let totalEquipo = 0;
       const scoresPorAparato = {};
+      const eligibleMembers = clMembers.slice(0, maxGimnastasEquipo);
 
       if (tournament && tournament.aparatos) {
-        const is1BGroup = baseKey.toLowerCase().replace(/\s+/g, '').includes('1b');
+        const is1B = baseCategory.toLowerCase().replace(/\s+/g, '').includes('1b');
         const categoryApparatuses = tournament.aparatos.filter(ap => {
-          if (is1BGroup) {
+          if (is1B) {
             const name = ap.toLowerCase();
             return name.includes('salto') || name.includes('suelo');
           }
@@ -200,20 +238,19 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
             scoresPorAparato[ap] = 0;
             return;
           }
-          const notes = clMembers
-            .map(m => m.scores[ap])
-            .filter(n => n !== null && n !== undefined)
+          const notes = eligibleMembers
+            .map(m => m.scores ? m.scores[ap] : (m.notas?.[ap]?.final !== undefined ? parseFloat(m.notas[ap].final) : null))
+            .filter(n => n !== null && n !== undefined && !isNaN(n))
             .sort((a, b) => b - a);
           
-          const best3 = notes.slice(0, 3);
-          const sum = best3.reduce((a, b) => a + b, 0);
+          const bestScores = notes.slice(0, mejoresNotasEquipo);
+          const sum = bestScores.reduce((a, b) => a + b, 0);
           scoresPorAparato[ap] = sum > 0 ? parseFloat(sum.toFixed(3)) : 0;
           totalEquipo += scoresPorAparato[ap];
         });
       }
 
-      const descuento = tournament.descuentosEquipos?.[baseKey]?.[clubName] || 
-                         tournament.descuentosEquipos?.[groupKey]?.[clubName] || 0;
+      const descuento = tournament.descuentosEquipos?.[baseCategory]?.[clubName] || 0;
       const totalConDescuento = parseFloat(Math.max(0, totalEquipo - descuento).toFixed(3));
 
       clubResults.push({
@@ -238,7 +275,7 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
     return clubResults;
   };
 
-  const currentTeamRankings = getTeamRankings(activeGroupKey);
+  const currentTeamRankings = getTeamRankings(activeTeamCategory);
 
   const getLatestScore = (gymnastList, filterAp = null) => {
     let latest = null;
@@ -314,23 +351,23 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
           if (isGlobalScreen || isMatchingApparatus) {
             setLastProjected({ gymnast: msg.gymnast, aparato: msg.aparato, score: msg.score });
             
-            // Si es pantalla dedicada, mostramos el dramatic reveal. Si es global, mostramos el flash note (toast gigante)
+            // Si es pantalla dedicada, mostramos el dramatic reveal. Si es global, encolamos la nota flash
             if (isMatchingApparatus) {
               setProjectionMode('ultima');
               triggerReveal(msg.gymnast, msg.aparato, msg.score);
             } else {
-              const newNotif = {
+              const newFlashItem = {
                 id: Date.now() + Math.random(),
+                gymnast: msg.gymnast,
                 gymnastName: msg.gymnast.nombre,
+                institucion: msg.gymnast.institucion,
+                nivel: msg.gymnast.nivel,
+                categoria: msg.gymnast.categoria,
                 score: msg.score.final,
                 notaD: msg.score.notaD,
                 aparato: msg.aparato
               };
-              setScoreNotifications(prev => [...prev, newNotif]);
-              
-              setTimeout(() => {
-                setScoreNotifications(prev => prev.filter(n => n.id !== newNotif.id));
-              }, 10000);
+              setFlashQueue(prev => [...prev, newFlashItem]);
             }
           }
         } else if (msg.type === 'PROJECT_SCORE') {
@@ -357,49 +394,79 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
       ws.close();
       if (rotationTimerRef.current) clearInterval(rotationTimerRef.current);
       if (revealTimerRef.current) clearTimeout(revealTimerRef.current);
+      if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
     };
   }, [apiBase, wsBase, auth.tournamentId]);
+
+  // Manejo de la cola de notas flash (despliegue secuencial ordenado para evitar solapamientos)
+  useEffect(() => {
+    if (!activeFlash && flashQueue.length > 0) {
+      const nextFlash = flashQueue[0];
+      setActiveFlash(nextFlash);
+      setFlashQueue(prev => prev.slice(1));
+
+      // Disparar confeti si la nota es excelente (> 9.20)
+      if (nextFlash.score >= 9.20) {
+        confetti({
+          particleCount: 130,
+          spread: 80,
+          origin: { y: 0.6 }
+        });
+      }
+
+      // Tiempo de visualización: si hay notas esperando en cola, reducimos a 4.5s; si es única, 6.5s
+      const duration = flashQueue.length > 1 ? 4500 : 6500;
+      if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
+      flashTimerRef.current = setTimeout(() => {
+        setActiveFlash(null);
+      }, duration);
+    }
+  }, [activeFlash, flashQueue]);
 
   // Lógica de carrusel rotativo
   useEffect(() => {
     if (rotationTimerRef.current) clearInterval(rotationTimerRef.current);
     
-    // Si hay una revelación en vivo activa, pausar rotación
-    if (liveReveal) return;
+    // Si hay una revelación en vivo o nota flash activa, pausar rotación del fondo
+    if (liveReveal || activeFlash) return;
  
     rotationTimerRef.current = setInterval(() => {
-      const keys = rotatedGroups;
-      if (keys.length === 0) return;
-
       const showEquipos = tournament?.configuracion?.premios?.equipos ?? true;
       const showAllAround = tournament?.configuracion?.premios?.allAround ?? true;
  
       if (viewMode === 'individual') {
-        // Pasar a ranking por equipos o al siguiente grupo
+        const keys = rotatedGroups;
+        if (keys.length === 0) return;
+        // Avanzar al siguiente grupo individual o cambiar a equipos
         if (activeGroupIndex < keys.length - 1) {
           setActiveGroupIndex(prev => prev + 1);
         } else {
-          // Cambiar a ver equipos si está habilitado
-          if (showEquipos) {
+          if (showEquipos && rotatedTeamCategories.length > 0) {
             setViewMode('equipos');
+            setActiveTeamIndex(0);
+          } else {
+            setActiveGroupIndex(0);
           }
-          setActiveGroupIndex(0);
         }
       } else {
-        // En modo equipos, pasar al siguiente grupo o volver a individual
-        if (activeGroupIndex < keys.length - 1) {
-          setActiveGroupIndex(prev => prev + 1);
+        // En modo equipos, rotar a través de las categorías completas (sin división por edad)
+        const keys = rotatedTeamCategories;
+        if (keys.length === 0) return;
+        if (activeTeamIndex < keys.length - 1) {
+          setActiveTeamIndex(prev => prev + 1);
         } else {
-          if (showAllAround) {
+          if (showAllAround && rotatedGroups.length > 0) {
             setViewMode('individual');
+            setActiveGroupIndex(0);
+          } else {
+            setActiveTeamIndex(0);
           }
-          setActiveGroupIndex(0);
         }
       }
     }, 12000); // Rota cada 12 segundos
  
     return () => clearInterval(rotationTimerRef.current);
-  }, [gymnasts, activeGroupIndex, viewMode, liveReveal, selectedGroups, selectedTurno]);
+  }, [gymnasts, activeGroupIndex, activeTeamIndex, viewMode, liveReveal, activeFlash, selectedGroups, selectedTurno, rotatedGroups, rotatedTeamCategories]);
 
   // Disparador del reveal en vivo
   const triggerReveal = (gymnast, aparato, score) => {
@@ -704,6 +771,25 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
                 Volver al Inicio
               </button>
             )}
+            <button
+              onClick={() => {
+                setViewMode(prev => prev === 'individual' ? 'equipos' : 'individual');
+              }}
+              className="btn btn-secondary"
+              style={{
+                padding: '8px 12px',
+                fontSize: '0.8rem',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                border: viewMode === 'equipos' ? '1px solid var(--accent-purple)' : '1px solid var(--accent-primary)',
+                color: viewMode === 'equipos' ? 'var(--accent-purple)' : 'var(--accent-primary)',
+                fontWeight: '600'
+              }}
+              title="Cambiar vista entre Individual y Equipos"
+            >
+              {viewMode === 'individual' ? '👥 Ver Equipos' : '🏆 Ver Individual'}
+            </button>
             <button 
               onClick={handleToggleFullscreen} 
               className="btn btn-secondary" 
@@ -756,20 +842,26 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
               }}>
                 {viewMode === 'individual' ? '🏆 Ranking Individual General' : '👥 Ranking por Equipos'}
               </span>
-              <h2 style={{ fontSize: '2.5rem', color: '#fff', fontWeight: '800', letterSpacing: '-0.02em' }}>
-                {viewMode === 'individual' ? activeGroupKey : getBaseCategoryKey(activeGroupKey)}
+              <h2 style={{ fontSize: '2.5rem', color: '#fff', fontWeight: '800', letterSpacing: '-0.02em', margin: 0 }}>
+                {viewMode === 'individual' ? activeGroupKey : activeTeamCategory}
               </h2>
+              {viewMode === 'equipos' && (
+                <div style={{ fontSize: '0.95rem', color: 'var(--accent-purple)', marginTop: '6px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>Categoría Completa (Sin división por edad)</span>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>· Mejores {mejoresNotasEquipo} notas</span>
+                </div>
+              )}
             </div>
             
             {/* Indicador visual de rotación */}
             <div style={{ display: 'flex', gap: '6px' }}>
-              {groupKeys.map((k, i) => (
+              {(viewMode === 'individual' ? rotatedGroups : rotatedTeamCategories).map((k, i) => (
                 <div 
                   key={k} 
                   style={{
                     width: '12px', height: '12px', borderRadius: '50%',
-                    background: i === activeGroupIndex ? (viewMode === 'individual' ? 'var(--accent-primary)' : 'var(--accent-purple)') : 'rgba(255,255,255,0.05)',
-                    boxShadow: i === activeGroupIndex ? '0 0 10px currentColor' : 'none',
+                    background: i === (viewMode === 'individual' ? safeGroupIndex : safeTeamIndex) ? (viewMode === 'individual' ? 'var(--accent-primary)' : 'var(--accent-purple)') : 'rgba(255,255,255,0.05)',
+                    boxShadow: i === (viewMode === 'individual' ? safeGroupIndex : safeTeamIndex) ? '0 0 10px currentColor' : 'none',
                     transition: 'all 0.3s'
                   }} 
                 />
@@ -961,6 +1053,50 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
               <span style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#fff', letterSpacing: '0.05em' }}>Gimnasia Pro MDZ</span>
             </div>
 
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', justifyContent: 'center', alignItems: 'center', marginBottom: '14px' }}>
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 24px',
+                borderRadius: '999px',
+                background: 'rgba(59, 130, 246, 0.2)',
+                border: '1.5px solid var(--accent-primary)',
+                color: '#60a5fa',
+                fontWeight: '800',
+                fontSize: '1.5rem',
+                textTransform: 'uppercase'
+              }}>
+                Aparato: {liveReveal.aparato}
+              </div>
+
+              {(() => {
+                const nivelStr = formatNivelDisplay(liveReveal.gymnast);
+                const is1A = nivelStr.includes('1A');
+                const is1B = nivelStr.includes('1B');
+                const bgCol = is1A ? 'rgba(16, 185, 129, 0.22)' : is1B ? 'rgba(245, 158, 11, 0.22)' : 'rgba(168, 85, 247, 0.22)';
+                const borderCol = is1A ? '#10b981' : is1B ? '#f59e0b' : '#a855f7';
+                const textCol = is1A ? '#34d399' : is1B ? '#fbbf24' : '#c084fc';
+                return (
+                  <div style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 18px',
+                    borderRadius: '999px',
+                    background: bgCol,
+                    border: `1.5px solid ${borderCol}`,
+                    color: textCol,
+                    fontWeight: '800',
+                    fontSize: '1.15rem',
+                    textTransform: 'uppercase'
+                  }}>
+                    ⭐ {nivelStr}
+                  </div>
+                );
+              })()}
+            </div>
+
             <div style={{
               fontSize: '1rem',
               color: liveReveal.score.final >= 9.20 ? '#0ea5e9' : 'var(--accent-primary)',
@@ -977,7 +1113,7 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
             </h2>
 
             <p style={{ fontSize: '1.6rem', color: 'var(--text-secondary)', marginBottom: '30px' }}>
-              {liveReveal.gymnast.institucion} • <strong>{liveReveal.gymnast.nivel} {liveReveal.gymnast.categoria}</strong>
+              {liveReveal.gymnast.institucion || 'Independiente'} • <strong>{formatNivelDisplay(liveReveal.gymnast)} {liveReveal.gymnast.categoria ? `• ${liveReveal.gymnast.categoria}` : ''}</strong>
             </p>
 
             {(() => {
@@ -1038,74 +1174,234 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
         </div>
       )}
 
-      {/* FLASH SCORE NOTIFICATIONS (TOASTS QUE NO COLAPSAN) */}
-      <div style={{
-        position: 'fixed',
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '20px',
-        zIndex: 9999,
-        pointerEvents: 'none',
-        alignItems: 'center'
-      }}>
-        {scoreNotifications.map(notif => {
-          const isGamApparatus = tournament?.modalidad === 'GAM' || (tournament?.modalidad === 'Ambos' && (notif.aparato.includes('(M)') || ['Arzones', 'Anillas', 'Barra Fija'].includes(notif.aparato)));
-          const tipoCalc = tournament?.configuracion?.tipoCalculo;
-          const showNotaD = tipoCalc !== 'base 10' && !isGamApparatus && notif.notaD > 0;
+      {/* FLASH SCORE NOTIFICATIONS SECUENCIALES (PANTALLA COMPLETA, SIN SOLAPAMIENTO) */}
+      {activeFlash && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(3, 7, 18, 0.88)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          zIndex: 9999,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '24px',
+          animation: 'fadeInFlash 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards'
+        }}>
+          {/* Tarjeta de Flash Score */}
+          <div style={{
+            background: 'linear-gradient(145deg, rgba(15, 23, 42, 0.95), rgba(8, 12, 28, 0.98))',
+            border: activeFlash.score >= 9.20 
+              ? '3px solid #38bdf8' 
+              : '3px solid var(--accent-primary)',
+            boxShadow: activeFlash.score >= 9.20
+              ? '0 25px 70px rgba(14, 165, 233, 0.45), 0 0 100px rgba(56, 189, 248, 0.2)'
+              : '0 25px 70px rgba(0, 0, 0, 0.8), 0 0 80px rgba(59, 130, 246, 0.25)',
+            borderRadius: '32px',
+            padding: '45px 60px',
+            maxWidth: '1000px',
+            width: '92%',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            textAlign: 'center',
+            position: 'relative'
+          }}>
+            {/* Botón para cerrar la nota anticipadamente */}
+            <button
+              onClick={() => setActiveFlash(null)}
+              style={{
+                position: 'absolute',
+                top: '20px',
+                right: '25px',
+                background: 'rgba(255,255,255,0.08)',
+                border: 'none',
+                color: 'var(--text-muted)',
+                fontSize: '1.2rem',
+                cursor: 'pointer',
+                borderRadius: '50%',
+                width: '36px',
+                height: '36px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+              title="Cerrar nota"
+            >
+              ✕
+            </button>
 
-          return (
-            <div key={notif.id} className="fade-in" style={{
-              background: 'rgba(11, 18, 38, 0.95)',
-              color: 'white',
-              padding: '50px 80px',
-              borderRadius: '30px',
-              boxShadow: '0 30px 60px rgba(0,0,0,0.7)',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              minWidth: '500px',
-              border: '4px solid var(--accent-primary)',
-              backdropFilter: 'blur(15px)'
-            }}>
-              <span style={{ fontSize: '2.5rem', fontWeight: 'bold', textTransform: 'uppercase', textAlign: 'center', color: 'var(--text-primary)' }}>
-                {notif.gymnastName}
-              </span>
-              
-              {showNotaD ? (
-                <div style={{ display: 'flex', gap: '40px', marginTop: '15px', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <span style={{ fontSize: '1rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Nota D</span>
-                    <span style={{ fontSize: '5rem', fontWeight: '800', color: '#f59e0b', textShadow: '0 0 20px rgba(245, 158, 11, 0.4)' }}>
-                      {notif.notaD.toFixed(3)}
-                    </span>
+            {/* Badges de Aparato y Nivel (1A / 1B / 2) */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '14px', justifyContent: 'center', alignItems: 'center', marginBottom: '20px' }}>
+              {/* APARATO */}
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 30px',
+                borderRadius: '999px',
+                background: 'rgba(59, 130, 246, 0.2)',
+                border: '2px solid var(--accent-primary)',
+                color: '#60a5fa',
+                fontWeight: '900',
+                fontSize: '1.8rem',
+                letterSpacing: '0.05em',
+                textTransform: 'uppercase',
+                boxShadow: '0 0 20px rgba(59, 130, 246, 0.3)'
+              }}>
+                Aparato: {activeFlash.aparato}
+              </div>
+
+              {/* NIVEL (Nivel 1A, Nivel 1B o Nivel 2) */}
+              {(() => {
+                const nivelStr = formatNivelDisplay(activeFlash.gymnast || activeFlash);
+                const is1A = nivelStr.includes('1A');
+                const is1B = nivelStr.includes('1B');
+
+                const bgCol = is1A ? 'rgba(16, 185, 129, 0.22)' : is1B ? 'rgba(245, 158, 11, 0.22)' : 'rgba(168, 85, 247, 0.22)';
+                const borderCol = is1A ? '#10b981' : is1B ? '#f59e0b' : '#a855f7';
+                const textCol = is1A ? '#34d399' : is1B ? '#fbbf24' : '#c084fc';
+
+                return (
+                  <div style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 24px',
+                    borderRadius: '999px',
+                    background: bgCol,
+                    border: `2px solid ${borderCol}`,
+                    color: textCol,
+                    fontWeight: '900',
+                    fontSize: '1.35rem',
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    boxShadow: `0 0 20px ${borderCol}44`
+                  }}>
+                    ⭐ {nivelStr}
                   </div>
-                  <div style={{ width: '2px', height: '80px', background: 'rgba(255,255,255,0.1)' }}></div>
+                );
+              })()}
+            </div>
+
+            {/* Nombre de la Gimnasta */}
+            <h1 style={{
+              fontSize: 'clamp(2.4rem, 5.5vw, 4.4rem)',
+              fontWeight: '900',
+              color: '#ffffff',
+              margin: '10px 0 6px',
+              textTransform: 'uppercase',
+              letterSpacing: '-0.02em',
+              textShadow: '0 4px 30px rgba(0,0,0,0.8)'
+            }}>
+              {activeFlash.gymnastName}
+            </h1>
+
+            {/* Club e Institución */}
+            <div style={{
+              fontSize: '1.45rem',
+              color: 'var(--text-secondary)',
+              marginBottom: '25px',
+              fontWeight: '500'
+            }}>
+              {activeFlash.institucion || 'Independiente'}
+              {activeFlash.categoria ? ` • ${activeFlash.categoria}` : ''}
+            </div>
+
+            {/* Puntaje Final y Nota D */}
+            {(() => {
+              const isGamApparatus = tournament?.modalidad === 'GAM' || (tournament?.modalidad === 'Ambos' && (activeFlash.aparato.includes('(M)') || ['Arzones', 'Anillas', 'Barra Fija'].includes(activeFlash.aparato)));
+              const tipoCalc = tournament?.configuracion?.tipoCalculo;
+              const showNotaD = tipoCalc !== 'base 10' && !isGamApparatus && activeFlash.notaD > 0;
+
+              return (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: showNotaD ? '70px' : '0',
+                  paddingTop: '25px',
+                  borderTop: '1px solid rgba(255,255,255,0.1)',
+                  width: '100%'
+                }}>
+                  {showNotaD && (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      <span style={{ fontSize: '1.15rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: '700', marginBottom: '5px' }}>
+                        Nota D
+                      </span>
+                      <span style={{
+                        fontSize: 'clamp(3.5rem, 6.5vw, 5.2rem)',
+                        fontWeight: '800',
+                        color: '#f59e0b',
+                        fontFamily: 'var(--font-mono)',
+                        lineHeight: '1',
+                        textShadow: '0 0 25px rgba(245, 158, 11, 0.4)'
+                      }}>
+                        {Number(activeFlash.notaD).toFixed(3)}
+                      </span>
+                    </div>
+                  )}
+
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <span style={{ fontSize: '1rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Final</span>
-                    <span style={{ fontSize: '7rem', fontWeight: '900', color: 'var(--accent-primary)', textShadow: '0 0 30px rgba(59, 130, 246, 0.6)' }}>
-                      {notif.score !== undefined && notif.score !== null ? notif.score.toFixed(3) : '-'}
+                    <span style={{ fontSize: '1.25rem', color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: '800', marginBottom: '5px' }}>
+                      Nota Final
+                    </span>
+                    <span style={{
+                      fontSize: showNotaD ? 'clamp(5rem, 9vw, 7.5rem)' : 'clamp(6rem, 12vw, 9rem)',
+                      fontWeight: '900',
+                      color: 'var(--accent-success)',
+                      fontFamily: 'var(--font-mono)',
+                      lineHeight: '1',
+                      textShadow: '0 0 50px rgba(16, 185, 129, 0.55)'
+                    }}>
+                      {activeFlash.score !== undefined && activeFlash.score !== null ? Number(activeFlash.score).toFixed(3) : '-'}
                     </span>
                   </div>
                 </div>
-              ) : (
-                <span style={{ fontSize: '7rem', fontWeight: '900', marginTop: '15px', color: 'var(--accent-primary)', textShadow: '0 0 30px rgba(59, 130, 246, 0.6)' }}>
-                  {notif.score !== undefined && notif.score !== null ? notif.score.toFixed(3) : '-'}
-                </span>
-              )}
-            </div>
-          );
-        })}
-      </div>
+              );
+            })()}
 
-      {/* ESTILOS CSS INLINE ADICIONALES PARA EL FADEIN */}
+            {/* Aviso de Notas en Espera en la Cola */}
+            {flashQueue.length > 0 && (
+              <div style={{
+                marginTop: '30px',
+                padding: '8px 22px',
+                borderRadius: '999px',
+                background: 'rgba(59, 130, 246, 0.12)',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                color: '#93c5fd',
+                fontSize: '1.05rem',
+                fontWeight: '600',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '10px'
+              }}>
+                <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: '#60a5fa', animation: 'pulseDot 1.5s infinite' }} />
+                <span>En espera: <strong>{flashQueue[0].gymnastName} ({flashQueue[0].aparato})</strong> {flashQueue.length > 1 ? ` y ${flashQueue.length - 1} más` : ''}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ESTILOS CSS INLINE ADICIONALES PARA ANIMACIONES */}
       <style>{`
         @keyframes fadeIn {
           from { opacity: 0; transform: scale(0.98); }
           to { opacity: 1; transform: scale(1); }
+        }
+        @keyframes fadeInFlash {
+          from { opacity: 0; transform: scale(0.95); }
+          to { opacity: 1; transform: scale(1); }
+        }
+        @keyframes pulseDot {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.3; transform: scale(1.4); }
         }
       `}</style>
 

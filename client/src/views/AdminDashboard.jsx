@@ -149,17 +149,17 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
             setFlashApparatus('');
           }, 2000);
 
-          // Agregar notificación flash de la nota (5 segundos)
-          const newNotif = {
-            id: Date.now() + Math.random(),
-            gymnastName: msg.gymnast.nombre,
-            score: msg.score.final
+          // Mostrar banner en AdminDashboard con aparato y nivel
+          const formatNivelAdmin = (g) => {
+            if (!g) return '';
+            const comb = `${g.nivel || ''} ${g.categoria || ''}`.toLowerCase();
+            if (comb.includes('1a') || comb.includes('1 a')) return 'Nivel 1A';
+            if (comb.includes('1b') || comb.includes('1 b')) return 'Nivel 1B';
+            if (comb.includes('2')) return 'Nivel 2';
+            return g.nivel || 'Nivel 1';
           };
-          setScoreNotifications(prev => [...prev, newNotif]);
-          
-          setTimeout(() => {
-            setScoreNotifications(prev => prev.filter(n => n.id !== newNotif.id));
-          }, 10000);
+          const nivelTxt = formatNivelAdmin(msg.gymnast);
+          showFlashNotification(`⭐ Nueva nota: ${msg.gymnast.nombre} (${nivelTxt}) en ${msg.aparato}: ${msg.score?.final !== undefined ? Number(msg.score.final).toFixed(3) : ''}`);
         }
       } catch (e) {
         console.error('Error al procesar mensaje de WebSocket:', e);
@@ -621,7 +621,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
     ? gymnasts
     : gymnasts.filter(g => g.grupo === selectedTurno);
   
-  // Agrupar gimnastas por Nivel y Categoría (incluyendo año de nacimiento si existe)
+  // Agrupar gimnastas por Categoría Completa (Nivel + Categoría, sin división por edad en la estructura base)
   const groupedRankings = {};
   podiumFilteredGymnasts.forEach(g => {
     const formatStr = (str) => {
@@ -630,16 +630,22 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
     };
     const nivelFmt = formatStr(g.nivel);
     const catFmt = formatStr(g.categoria);
-    const isMayor = catFmt.toLowerCase().includes('mayor');
-    const groupingYear = isMayor ? '' : g.nacimiento;
-    const key = groupingYear ? `${nivelFmt} - ${catFmt} ${groupingYear}` : `${nivelFmt} - ${catFmt}`;
+    // La clave principal es la categoría completa
+    const key = `${nivelFmt} - ${catFmt}`;
     if (!groupedRankings[key]) groupedRankings[key] = [];
 
     // Calcular totales
     let totalScore = 0;
     let hasScores = false;
     const scores = {};
+    const is1BGroup = key.toLowerCase().replace(/\s+/g, '').includes('1b');
+    
     tournament.aparatos.forEach(ap => {
+      if (is1BGroup) {
+        const name = ap.toLowerCase();
+        if (!name.includes('salto') && !name.includes('suelo')) return;
+      }
+      
       const note = g.notas?.[ap]?.final;
       if (note !== undefined && note !== null) {
         scores[ap] = parseFloat(note);
@@ -662,14 +668,11 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
     });
   });
 
-  // Ordenar y rankear
+  // Ordenar y rankear individualmente
   Object.keys(groupedRankings).forEach(k => {
     groupedRankings[k].sort((a, b) => b.totalScore - a.totalScore);
     let rank = 1;
     for (let idx = 0; idx < groupedRankings[k].length; idx++) {
-      if (idx > 0 && groupedRankings[k][idx].totalScore < groupedRankings[k - 1]?.totalScore) {
-        // En caso de empate, mismo puesto
-      }
       if (idx > 0 && groupedRankings[k][idx].totalScore < groupedRankings[k][idx - 1].totalScore) {
         rank = idx + 1;
       }
@@ -677,10 +680,10 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
     }
   });
 
-  // Podios segmentados por año de nacimiento dentro de Nivel + Categoría
+  // Podios individuales segmentados por año de nacimiento dentro de la Categoría Completa
   const getPodiumByYear = (groupKey) => {
     const members = groupedRankings[groupKey] || [];
-    // Agrupar por año
+    // Agrupar por año de nacimiento
     const yearsGroup = {};
     members.forEach(m => {
       const isMayor = m.categoria && m.categoria.toLowerCase().includes('mayor');
@@ -708,15 +711,15 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
     return key.replace(/\s+\d{4}$/, '').trim();
   };
 
-  // Clasificación por Equipos (Clubes): suma de las mejores 3 notas de cada aparato por institución (agrupando subdivisiones)
+  // Clasificación por Equipos (Clubes): se toma la CATEGORÍA COMPLETA, sin división por edad.
+  // Suma de las mejores notas de cada aparato por institución en toda la categoría.
+  const minGimnastasEquipo = tournament?.configuracion?.equipoMinGimnastas ?? (tournament?.id === 'ejemplo-regional-4874' ? 6 : 3);
+  const maxGimnastasEquipo = tournament?.configuracion?.equipoMaxGimnastas ?? (tournament?.id === 'ejemplo-regional-4874' ? 12 : Infinity);
+  const mejoresNotasEquipo = tournament?.configuracion?.equipoMejoresNotas ?? (tournament?.id === 'ejemplo-regional-4874' ? 6 : 3);
+
   const getTeamRankings = (groupKey) => {
-    const baseKey = getBaseCategoryKey(groupKey);
-    const members = [];
-    Object.keys(groupedRankings).forEach(k => {
-      if (getBaseCategoryKey(k) === baseKey) {
-        members.push(...groupedRankings[k]);
-      }
-    });
+    // groupKey es la categoría completa (ej: "Nivel 1 A - Infantil")
+    const members = groupedRankings[groupKey] || [];
 
     const clubMembers = {};
     members.forEach(m => {
@@ -727,25 +730,32 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
     const clubResults = [];
     Object.keys(clubMembers).forEach(clubName => {
       const clMembers = clubMembers[clubName];
-      if (clMembers.length < 3) return;
+      if (clMembers.length < minGimnastasEquipo) return;
       let totalEquipo = 0;
       const scoresPorAparato = {};
+      const eligibleMembers = clMembers.slice(0, maxGimnastasEquipo);
 
+      const is1BGroup = groupKey.toLowerCase().replace(/\s+/g, '').includes('1b');
       tournament.aparatos.forEach(ap => {
-        const notes = clMembers
+        if (is1BGroup) {
+          const name = ap.toLowerCase();
+          if (!name.includes('salto') && !name.includes('suelo')) return;
+        }
+
+        const notes = eligibleMembers
           .map(m => m.scores[ap])
           .filter(n => n !== null && n !== undefined)
           .sort((a, b) => b - a);
         
-        // Sumar mejores 3
-        const best3 = notes.slice(0, 3);
-        const sum = best3.reduce((a, b) => a + b, 0);
+        // Sumar mejores notas configuradas
+        const bestScores = notes.slice(0, mejoresNotasEquipo);
+        const sum = bestScores.reduce((a, b) => a + b, 0);
         scoresPorAparato[ap] = sum > 0 ? parseFloat(sum.toFixed(3)) : 0;
         totalEquipo += scoresPorAparato[ap];
       });
 
-      const descuento = tournament.descuentosEquipos?.[baseKey]?.[clubName] || 
-                         tournament.descuentosEquipos?.[groupKey]?.[clubName] || 0;
+      const descuento = tournament.descuentosEquipos?.[groupKey]?.[clubName] || 
+                         tournament.descuentosEquipos?.[getBaseCategoryKey(groupKey)]?.[clubName] || 0;
       const totalConDescuento = parseFloat(Math.max(0, totalEquipo - descuento).toFixed(3));
 
       clubResults.push({
@@ -1566,10 +1576,27 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                 {/* TABLA PODIO POR EQUIPOS */}
                   {showEquipos && (
                   <div>
-                    <h3 style={{ fontSize: '1.1rem', marginBottom: '15px', color: 'var(--accent-purple)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <Users size={18} />
-                      Clasificación por Equipos (Mejores 3 Notas)
-                    </h3>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
+                      <h3 style={{ fontSize: '1.1rem', color: 'var(--accent-purple)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                        <Users size={18} />
+                        Clasificación por Equipos — Categoría Completa
+                      </h3>
+                      <span style={{ 
+                        fontSize: '0.75rem', 
+                        background: 'rgba(139, 92, 246, 0.15)', 
+                        color: 'var(--accent-purple)', 
+                        border: '1px solid rgba(139, 92, 246, 0.3)',
+                        padding: '3px 8px', 
+                        borderRadius: '6px', 
+                        fontWeight: '600' 
+                      }}>
+                        Sin división por edad · Mejores {mejoresNotasEquipo} notas
+                      </span>
+                    </div>
+                    
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>
+                      Participan todas las gimnastas de la institución en este nivel y categoría, sumando las mejores notas de cada aparato.
+                    </p>
                     
                     <div className="table-container">
                       <table>
