@@ -17,7 +17,7 @@ const MultiSelectDropdown = ({ label, options, selected, onChange }) => {
     <div className="form-group" style={{ marginBottom: 0, position: 'relative' }} ref={containerRef}>
       <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '600' }}>{label}</label>
       <div 
-        className="input-field" 
+        className="input-field" onFocus={(e) => e.target.select()} 
         style={{ padding: '8px 12px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
         onClick={() => setIsOpen(!isOpen)}
       >
@@ -358,7 +358,7 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
           <div className="form-group" style={{ marginBottom: '15px' }}>
             <label>Aparato</label>
             <select
-              className="input-field"
+              className="input-field" onFocus={(e) => e.target.select()}
               value={selectedApparatus}
               onChange={(e) => setSelectedApparatus(e.target.value)}
             >
@@ -756,7 +756,7 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label>Turno / Rotación</label>
                   <select 
-                    className="input-field" 
+                    className="input-field" onFocus={(e) => e.target.select()} 
                     style={{ padding: '8px' }}
                     value={activeTurno}
                     onChange={(e) => {
@@ -808,7 +808,7 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
               placeholder="Buscar gimnasta por nombre o club..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="input-field"
+              className="input-field" onFocus={(e) => e.target.select()}
               style={{ 
                 width: '100%', 
                 padding: '12px 16px 12px 40px',

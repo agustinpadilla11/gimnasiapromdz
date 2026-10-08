@@ -1100,7 +1100,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                 <select
                   value={monitorApparatus}
                   onChange={(e) => setMonitorApparatus(e.target.value)}
-                  className="input-field"
+                  className="input-field" onFocus={(e) => e.target.select()}
                   style={{
                     width: '160px',
                     padding: '8px 12px',
@@ -1123,7 +1123,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                 <select
                   value={orderBy}
                   onChange={(e) => setOrderBy(e.target.value)}
-                  className="input-field"
+                  className="input-field" onFocus={(e) => e.target.select()}
                   style={{
                     width: '120px',
                     padding: '8px 12px',
@@ -1141,7 +1141,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
               <input
                 type="text"
                 placeholder="Filtrar por gimnasta o club..."
-                className="input-field"
+                className="input-field" onFocus={(e) => e.target.select()}
                 style={{ width: '220px', padding: '8px 12px' }}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -1317,7 +1317,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
               <input
                 type="text"
                 placeholder="Buscar por nombre, club, nivel..."
-                className="input-field"
+                className="input-field" onFocus={(e) => e.target.select()}
                 style={{ width: '280px', padding: '8px 12px' }}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -1420,7 +1420,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                <select
                  value={selectedTurno}
                  onChange={(e) => setSelectedTurno(e.target.value)}
-                 className="input-field"
+                 className="input-field" onFocus={(e) => e.target.select()}
                  style={{
                    width: '200px',
                    padding: '8px 12px',
@@ -1828,7 +1828,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                   type="text"
                   required
                   placeholder="ej: Turno 1 (Día 1 - 08:00am)"
-                  className="input-field"
+                  className="input-field" onFocus={(e) => e.target.select()}
                   value={turnoForm.name}
                   onChange={(e) => setTurnoForm(prev => ({ ...prev, name: e.target.value }))}
                 />
@@ -1839,7 +1839,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                 <input
                   type="text"
                   placeholder="ej: Nivel 4, Nivel 5"
-                  className="input-field"
+                  className="input-field" onFocus={(e) => e.target.select()}
                   value={turnoForm.niveles}
                   onChange={(e) => setTurnoForm(prev => ({ ...prev, niveles: e.target.value }))}
                 />
@@ -1954,7 +1954,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                       min="0"
                       max="10"
                       placeholder={isGamContext ? "ej. 8.50" : "ej. 0.50"}
-                      className="input-field"
+                      className="input-field" onFocus={(e) => e.target.select()}
                       value={scoringForm.jueces[idx]}
                     onKeyDown={(e) => handleModalKeyDown(e, idx)}
                     onChange={(e) => {
@@ -1980,7 +1980,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                           step="0.05"
                           min="0"
                           max="20"
-                          className="input-field"
+                          className="input-field" onFocus={(e) => e.target.select()}
                           style={{ marginBottom: '10px' }}
                           value={scoringForm.notaD}
                           onKeyDown={(e) => handleModalKeyDown(e, 'notaD')}
@@ -2001,7 +2001,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                               step="0.1"
                               min="0"
                               max="5"
-                              className="input-field"
+                              className="input-field" onFocus={(e) => e.target.select()}
                               value={scoringForm.dtosAparato}
                               onKeyDown={(e) => handleModalKeyDown(e, 'dtosAparato')}
                               onChange={(e) => setScoringForm(prev => ({ ...prev, dtosAparato: e.target.value }))}
@@ -2019,7 +2019,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                       step="0.1"
                       min="0"
                       max="5"
-                      className="input-field"
+                      className="input-field" onFocus={(e) => e.target.select()}
                       value={scoringForm.dtos}
                       onKeyDown={(e) => handleModalKeyDown(e, 'dtos')}
                       onChange={(e) => setScoringForm(prev => ({ ...prev, dtos: e.target.value }))}
@@ -2068,7 +2068,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                   type="text"
                   required
                   placeholder="ej. Gomez, Sofia"
-                  className="input-field"
+                  className="input-field" onFocus={(e) => e.target.select()}
                   value={gymnastForm.nombre}
                   onChange={(e) => setGymnastForm(prev => ({ ...prev, nombre: e.target.value }))}
                 />
@@ -2080,7 +2080,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                   type="text"
                   required
                   placeholder="ej. Akro's"
-                  className="input-field"
+                  className="input-field" onFocus={(e) => e.target.select()}
                   value={gymnastForm.institucion}
                   onChange={(e) => setGymnastForm(prev => ({ ...prev, institucion: e.target.value }))}
                 />
@@ -2093,7 +2093,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                     type="text"
                     required
                     placeholder="ej. Infantil"
-                    className="input-field"
+                    className="input-field" onFocus={(e) => e.target.select()}
                     value={gymnastForm.categoria}
                     onChange={(e) => setGymnastForm(prev => ({ ...prev, categoria: e.target.value }))}
                   />
@@ -2105,7 +2105,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                     type="text"
                     required
                     placeholder="ej. Nivel 1A"
-                    className="input-field"
+                    className="input-field" onFocus={(e) => e.target.select()}
                     value={gymnastForm.nivel}
                     onChange={(e) => setGymnastForm(prev => ({ ...prev, nivel: e.target.value }))}
                   />
@@ -2119,7 +2119,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                     type="text"
                     maxLength={4}
                     placeholder="ej. 2013"
-                    className="input-field"
+                    className="input-field" onFocus={(e) => e.target.select()}
                     value={gymnastForm.nacimiento}
                     onChange={(e) => setGymnastForm(prev => ({ ...prev, nacimiento: e.target.value }))}
                   />
@@ -2131,7 +2131,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                     type="text"
                     required
                     placeholder="ej. Turno 1"
-                    className="input-field"
+                    className="input-field" onFocus={(e) => e.target.select()}
                     value={gymnastForm.grupo}
                     onChange={(e) => setGymnastForm(prev => ({ ...prev, grupo: e.target.value }))}
                   />
@@ -2182,7 +2182,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                 min="0"
                 max="50"
                 placeholder="ej. 1.0"
-                className="input-field"
+                className="input-field" onFocus={(e) => e.target.select()}
                 value={teamDiscountValue}
                 onChange={(e) => setTeamDiscountValue(e.target.value)}
                 autoFocus
@@ -2232,7 +2232,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                 min="0"
                 max="50"
                 placeholder="ej. 0.5"
-                className="input-field"
+                className="input-field" onFocus={(e) => e.target.select()}
                 value={gymnastDiscountValue}
                 onChange={(e) => setGymnastDiscountValue(e.target.value)}
                 autoFocus
