@@ -1,23 +1,45 @@
+import dns from 'node:dns';
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+// Configurar fallback DNS para resolver dominios en caso de que el ISP local tenga cacheado NXDOMAIN tras pausar/restaurar Supabase
+const resolver = new dns.Resolver();
+resolver.setServers(['8.8.8.8', '1.1.1.1']);
+const origLookup = dns.lookup;
+dns.lookup = (hostname, options, callback) => {
+  if (typeof options === 'function') {
+    callback = options;
+    options = {};
+  }
+  origLookup(hostname, options, (err, address, family) => {
+    if (!err) return callback(null, address, family);
+
+    resolver.resolve4(hostname, (resErr, addresses) => {
+      if (resErr || !addresses || addresses.length === 0) {
+        return callback(err);
+      }
+      if (options && options.all) {
+        return callback(null, addresses.map(addr => ({ address: addr, family: 4 })));
+      }
+      return callback(null, addresses[0], 4);
+    });
+  });
+};
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, '.env') });
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_KEY;
+const supabaseUrl = process.env.SUPABASE_URL || 'https://dhhfwpmxllmmatojqlao.supabase.co';
+const supabaseKey = process.env.SUPABASE_KEY || 'sb_publishable_x28NoMh8Hqbq9peQZ8UUsA_l4wbgPML';
 
-if (!supabaseUrl || !supabaseKey) {
+if (!process.env.SUPABASE_URL || !process.env.SUPABASE_KEY) {
   console.warn('Usando credenciales por defecto (fallback) para Supabase.');
 }
 
-const supabase = createClient(
-  supabaseUrl || 'https://dhhfwpmxllmmatojqlao.supabase.co', 
-  supabaseKey || 'sb_publishable_x28NoMh8Hqbq9peQZ8UUsA_l4wbgPML'
-);
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 export const getTournaments = async () => {
   try {

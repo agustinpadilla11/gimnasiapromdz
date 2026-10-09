@@ -22,7 +22,6 @@ import {
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import os from 'os';
 
 const __filenameFederacion = fileURLToPath(import.meta.url);
 const __dirnameFederacion = path.dirname(__filenameFederacion);

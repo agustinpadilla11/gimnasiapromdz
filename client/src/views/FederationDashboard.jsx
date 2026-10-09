@@ -19,6 +19,9 @@ export default function FederationDashboard({ apiBase, auth, onLoginSuccess, onL
   // Opciones adicionales
   const [newTipoCalculo, setNewTipoCalculo] = useState('base 10');
   const [newPremios, setNewPremios] = useState({ equipos: true, aparatos: true, allAround: true });
+  const [newEquipoMinGimnastas, setNewEquipoMinGimnastas] = useState(3);
+  const [newEquipoMaxGimnastas, setNewEquipoMaxGimnastas] = useState(12);
+  const [newEquipoMejoresNotas, setNewEquipoMejoresNotas] = useState(3);
 
   const fetchTournaments = async () => {
     try {
@@ -72,7 +75,10 @@ export default function FederationDashboard({ apiBase, auth, onLoginSuccess, onL
           juezPinGam: newModalidad === 'Ambos' ? newJuezPinGam : undefined,
           opciones: {
             tipoCalculo: newTipoCalculo,
-            premios: newPremios
+            premios: newPremios,
+            equipoMinGimnastas: Number(newEquipoMinGimnastas) || 3,
+            equipoMaxGimnastas: Number(newEquipoMaxGimnastas) || 12,
+            equipoMejoresNotas: Number(newEquipoMejoresNotas) || 3
           }
         })
       });
@@ -324,6 +330,50 @@ export default function FederationDashboard({ apiBase, auth, onLoginSuccess, onL
                 </label>
               </div>
             </div>
+
+            {newPremios.equipos && (
+              <div className="form-group" style={{ marginBottom: 0, gridColumn: 'span 2', background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                <label style={{ fontSize: '0.9rem', color: 'var(--accent-purple)', fontWeight: 600 }}>Configuración de Equipos</label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginTop: '8px' }}>
+                  <div>
+                    <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Mínimo de gimnastas</label>
+                    <input 
+                      type="number" 
+                      min="1" 
+                      max="30" 
+                      value={newEquipoMinGimnastas} 
+                      onChange={(e) => setNewEquipoMinGimnastas(e.target.value)}
+                      className="input-field" 
+                      style={{ marginTop: '4px' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Máximo de gimnastas</label>
+                    <input 
+                      type="number" 
+                      min="1" 
+                      max="30" 
+                      value={newEquipoMaxGimnastas} 
+                      onChange={(e) => setNewEquipoMaxGimnastas(e.target.value)}
+                      className="input-field" 
+                      style={{ marginTop: '4px' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Mejores notas por aparato</label>
+                    <input 
+                      type="number" 
+                      min="1" 
+                      max="15" 
+                      value={newEquipoMejoresNotas} 
+                      onChange={(e) => setNewEquipoMejoresNotas(e.target.value)}
+                      className="input-field" 
+                      style={{ marginTop: '4px' }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div style={{ gridColumn: 'span 2', display: 'flex', gap: '12px', marginTop: '10px' }}>
               <button type="submit" className="btn btn-primary" style={{ padding: '12px 24px' }} disabled={loading}>
