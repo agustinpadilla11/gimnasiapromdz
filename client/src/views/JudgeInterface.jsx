@@ -1095,15 +1095,28 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
               <div style={{ marginBottom: '25px', display: 'grid', gridTemplateColumns: `repeat(auto-fit, minmax(140px, 1fr))`, gap: '15px' }}>
                 {Array.from({ length: numJueces }).map((_, idx) => (
                   <div key={idx} style={{
-                      background: 'var(--bg-input)',
-                      border: `2px solid ${currentInputIdx === idx ? 'var(--accent-primary)' : 'var(--border-color)'}`,
-                      boxShadow: currentInputIdx === idx ? '0 0 0 2px rgba(111, 76, 255, 0.2)' : 'none',
-                      borderRadius: '12px',
-                      padding: '15px',
+                      background: currentInputIdx === idx ? 'rgba(111, 76, 255, 0.08)' : 'var(--bg-input)',
+                      border: `2px solid ${currentInputIdx === idx ? 'var(--accent-primary)' : 'rgba(255, 255, 255, 0.05)'}`,
+                      boxShadow: currentInputIdx === idx ? '0 0 20px rgba(111, 76, 255, 0.2)' : 'none',
+                      borderRadius: '16px',
+                      padding: '20px 10px',
                       textAlign: 'center',
-                      transition: 'all 0.2s ease'
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      transform: currentInputIdx === idx ? 'scale(1.02)' : 'scale(1)',
+                      position: 'relative',
+                      overflow: 'hidden'
                     }}>
-                    <div style={{ fontSize: '0.85rem', fontWeight: '600', color: currentInputIdx === idx ? 'var(--accent-primary)' : 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '10px' }}>
+                    {currentInputIdx === idx && (
+                      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: 'var(--accent-primary)' }} />
+                    )}
+                    <div style={{ 
+                        fontSize: '0.9rem', 
+                        fontWeight: '700', 
+                        color: currentInputIdx === idx ? 'var(--accent-primary)' : 'var(--text-muted)', 
+                        textTransform: 'uppercase', 
+                        letterSpacing: '1px',
+                        marginBottom: '15px' 
+                    }}>
                       Juez {idx + 1}
                     </div>
                     <input
@@ -1124,10 +1137,12 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
                         border: 'none',
                         outline: 'none',
                         textAlign: 'center',
-                        fontSize: '2rem',
+                        fontSize: '3rem',
                         fontFamily: 'var(--font-mono)',
-                        fontWeight: '700',
-                        color: juezDeductions[idx] !== '' ? 'var(--text-primary)' : 'var(--text-muted)',
+                        fontWeight: '800',
+                        color: juezDeductions[idx] !== '' ? (currentInputIdx === idx ? 'var(--text-primary)' : 'var(--text-secondary)') : 'rgba(255,255,255,0.15)',
+                        textShadow: currentInputIdx === idx && juezDeductions[idx] !== '' ? '0 4px 12px rgba(0,0,0,0.3)' : 'none',
+                        transition: 'color 0.2s ease'
                       }}
                     />
                   </div>
@@ -1136,16 +1151,29 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
 
               {activeModalidad !== 'GAM' && (
                 <div style={{ 
-                  background: 'var(--bg-input)', 
-                  padding: '15px', 
-                  borderRadius: '12px', 
-                  border: `2px solid ${currentInputIdx === 'D' ? 'var(--accent-primary)' : 'var(--border-color)'}`,
-                  boxShadow: currentInputIdx === 'D' ? '0 0 0 2px rgba(111, 76, 255, 0.2)' : 'none',
-                  marginBottom: '20px',
-                  transition: 'all 0.2s ease',
-                  textAlign: 'center'
+                  background: currentInputIdx === 'D' ? 'rgba(111, 76, 255, 0.08)' : 'var(--bg-input)', 
+                  border: `2px solid ${currentInputIdx === 'D' ? 'var(--accent-primary)' : 'rgba(255, 255, 255, 0.05)'}`,
+                  boxShadow: currentInputIdx === 'D' ? '0 0 20px rgba(111, 76, 255, 0.2)' : 'none',
+                  borderRadius: '16px',
+                  padding: '20px 10px',
+                  marginBottom: '25px',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  transform: currentInputIdx === 'D' ? 'scale(1.02)' : 'scale(1)',
+                  textAlign: 'center',
+                  position: 'relative',
+                  overflow: 'hidden'
                 }}>
-                  <h4 style={{ fontSize: '0.85rem', color: currentInputIdx === 'D' ? 'var(--accent-primary)' : 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '10px', fontWeight: '600' }}>
+                  {currentInputIdx === 'D' && (
+                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: 'var(--accent-primary)' }} />
+                  )}
+                  <h4 style={{ 
+                      fontSize: '0.9rem', 
+                      color: currentInputIdx === 'D' ? 'var(--accent-primary)' : 'var(--text-muted)', 
+                      textTransform: 'uppercase', 
+                      letterSpacing: '1px',
+                      marginBottom: '15px', 
+                      fontWeight: '700' 
+                  }}>
                     Nota D (Dificultad)
                   </h4>
                   <input
@@ -1162,10 +1190,12 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
                       border: 'none',
                       outline: 'none',
                       textAlign: 'center',
-                      fontSize: '1.8rem',
+                      fontSize: '3rem',
                       fontFamily: 'var(--font-mono)',
-                      fontWeight: '700',
-                      color: notaD !== '' ? 'var(--accent-primary)' : 'var(--text-muted)'
+                      fontWeight: '800',
+                      color: notaD !== '' ? (currentInputIdx === 'D' ? 'var(--text-primary)' : 'var(--text-secondary)') : 'rgba(255,255,255,0.15)',
+                      textShadow: currentInputIdx === 'D' && notaD !== '' ? '0 4px 12px rgba(0,0,0,0.3)' : 'none',
+                      transition: 'color 0.2s ease'
                     }}
                   />
                 </div>
@@ -1331,23 +1361,25 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
                 )}
                 
                 <div style={{
-                  padding: '12px',
-                  background: 'var(--bg-input)',
-                  borderRadius: '8px',
+                  padding: '20px 24px',
+                  background: 'linear-gradient(135deg, rgba(111, 76, 255, 0.2), rgba(111, 76, 255, 0.05))',
+                  borderRadius: '16px',
                   textAlign: 'center',
-                  border: '1px solid var(--accent-primary)',
+                  border: '2px solid var(--accent-primary)',
+                  boxShadow: '0 8px 25px rgba(111, 76, 255, 0.15)',
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center'
                 }}>
-                  <div style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                    NOTA FINAL A ENVIAR:
+                  <div style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-primary)', letterSpacing: '1px' }}>
+                    NOTA FINAL:
                   </div>
                   <div style={{ 
-                    fontSize: '2rem', 
+                    fontSize: '3.5rem', 
                     fontFamily: 'var(--font-mono)', 
-                    fontWeight: '800', 
-                    color: 'var(--accent-primary)' 
+                    fontWeight: '900', 
+                    color: '#fff',
+                    textShadow: '0 2px 15px rgba(111,76,255,0.6)' 
                   }}>
                     {scoreCalc.final.toFixed(3)}
                   </div>
