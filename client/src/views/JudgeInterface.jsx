@@ -290,9 +290,17 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
     if (!selectedGymnast) return;
 
     const handleKeyDown = (e) => {
-      // Evitar interceptar si el usuario está en el campo de búsqueda de texto
-      if (document.activeElement.tagName === 'INPUT' && document.activeElement.type === 'text') {
-        return;
+      if (document.activeElement.tagName === 'INPUT') {
+        if (document.activeElement.type === 'text') {
+          return;
+        }
+        if (document.activeElement.type === 'number') {
+          if (e.key === 'Enter') {
+            document.activeElement.blur();
+          } else {
+            return;
+          }
+        }
       }
 
       const key = e.key;
@@ -304,7 +312,7 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
       } else if (key === 'Backspace') {
         e.preventDefault();
         handleKeypadPress('BACK');
-      } else if (key === 'Escape' || key === 'c' || key === 'C') {
+      } else if (key === 'Escape' || key === 'c' || key === 'C' || key === 'Delete') {
         e.preventDefault();
         handleKeypadPress('CLEAR');
       } else if (key === 'Enter') {
@@ -1088,13 +1096,14 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
                 {Array.from({ length: numJueces }).map((_, idx) => (
                   <div key={idx} style={{
                       background: 'var(--bg-input)',
-                      border: '2px solid var(--border-color)',
+                      border: `2px solid ${currentInputIdx === idx ? 'var(--accent-primary)' : 'var(--border-color)'}`,
+                      boxShadow: currentInputIdx === idx ? '0 0 0 2px rgba(111, 76, 255, 0.2)' : 'none',
                       borderRadius: '12px',
                       padding: '15px',
                       textAlign: 'center',
                       transition: 'all 0.2s ease'
                     }}>
-                    <div style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '10px' }}>
+                    <div style={{ fontSize: '0.85rem', fontWeight: '600', color: currentInputIdx === idx ? 'var(--accent-primary)' : 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '10px' }}>
                       Juez {idx + 1}
                     </div>
                     <input
@@ -1103,6 +1112,7 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
                       step="0.01"
                       placeholder="0.00"
                       value={juezDeductions[idx]}
+                      onFocus={() => setCurrentInputIdx(idx)}
                       onChange={(e) => {
                         const updated = [...juezDeductions];
                         updated[idx] = e.target.value;
@@ -1129,12 +1139,13 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
                   background: 'var(--bg-input)', 
                   padding: '15px', 
                   borderRadius: '12px', 
-                  border: '2px solid var(--border-color)',
+                  border: `2px solid ${currentInputIdx === 'D' ? 'var(--accent-primary)' : 'var(--border-color)'}`,
+                  boxShadow: currentInputIdx === 'D' ? '0 0 0 2px rgba(111, 76, 255, 0.2)' : 'none',
                   marginBottom: '20px',
                   transition: 'all 0.2s ease',
                   textAlign: 'center'
                 }}>
-                  <h4 style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '10px', fontWeight: '600' }}>
+                  <h4 style={{ fontSize: '0.85rem', color: currentInputIdx === 'D' ? 'var(--accent-primary)' : 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '10px', fontWeight: '600' }}>
                     Nota D (Dificultad)
                   </h4>
                   <input
@@ -1143,6 +1154,7 @@ export default function JudgeInterface({ apiBase, wsBase, auth, onLogout, onChan
                     step="0.01"
                     placeholder="0.00"
                     value={notaD}
+                    onFocus={() => setCurrentInputIdx('D')}
                     onChange={(e) => setNotaD(e.target.value)}
                     style={{
                       width: '100%',
