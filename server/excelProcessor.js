@@ -211,7 +211,7 @@ export const exportTournamentToExcel = (tournament, sortBy = 'grupo') => {
         g.grupo || 'Turno 1',
         g.nombre,
         g.fechaNacimiento || g.nacimiento || '',
-        g.institucion,
+        equipoAgrupacion === 'federacion' ? (g.federacion || g.institucion) : g.institucion,
         g.categoria,
         g.nivel,
         j1,
@@ -303,7 +303,7 @@ export const exportTournamentToExcel = (tournament, sortBy = 'grupo') => {
     const row = [
       g.grupo || 'Turno 1',
       g.nombre,
-      g.institucion,
+      equipoAgrupacion === 'federacion' ? (g.federacion || g.institucion) : g.institucion,
       g.categoria,
       g.nivel,
       g.nacimiento
@@ -367,16 +367,21 @@ export const exportTournamentToExcel = (tournament, sortBy = 'grupo') => {
       
       const gym = podiumGroups[key][idx];
       let medalla = '';
-      if (rank === 1) medalla = '🥇 Oro';
-      else if (rank === 2) medalla = '🥈 Plata';
-      else if (rank === 3) medalla = '🥉 Bronce';
-      else medalla = 'Mención';
+      let displayRank = '';
+      
+      if (gym.totalScore > 0) {
+        displayRank = rank;
+        if (rank === 1) medalla = '🥇 Oro';
+        else if (rank === 2) medalla = '🥈 Plata';
+        else if (rank === 3) medalla = '🥉 Bronce';
+        else medalla = 'Mención';
+      }
 
       podiumRows.push([
-        rank,
+        displayRank,
         medalla,
         gym.nombre,
-        gym.institucion,
+        equipoAgrupacion === 'federacion' ? (gym.federacion || gym.institucion) : gym.institucion,
         gym.categoria,
         gym.nivel,
         gym.nacimiento,
@@ -532,7 +537,7 @@ export const exportTournamentToExcel = (tournament, sortBy = 'grupo') => {
           rank,
           medalla,
           gym.nombre,
-          gym.institucion,
+          equipoAgrupacion === 'federacion' ? (gym.federacion || gym.institucion) : gym.institucion,
           noteObj.notaB !== undefined ? noteObj.notaB : '',
           noteObj.dtos !== undefined ? noteObj.dtos : '',
           noteObj.notaD !== undefined ? noteObj.notaD : '',
