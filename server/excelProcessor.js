@@ -139,6 +139,7 @@ export const importGimnastasFromExcel = (buffer, filename = '') => {
  */
 export const exportTournamentToExcel = (tournament, sortBy = 'grupo') => {
   const { nombre, modalidad, aparatos, gimnastas } = tournament;
+  const equipoAgrupacion = tournament?.configuracion?.equipoAgrupacion || 'institucion';
   const workbook = XLSX.utils.book_new();
 
   // Ordenar gimnastas para un mejor flujo visual en las hojas
@@ -183,7 +184,7 @@ export const exportTournamentToExcel = (tournament, sortBy = 'grupo') => {
     const isNotaD = tournament?.configuracion?.tipoCalculo === 'Nota D' || tournament?.configuracion?.tipoCalculo === 'Ambas';
     const showNotaD = isNotaD && !isGamApparatus;
 
-    const headerRow = ['TURNO', 'GIMNASTA', 'FECHA DE NACIMIENTO', 'INSTITUCIÓN', 'CATEGORÍA', 'NIVEL', 'JUEZ 1', 'JUEZ 2', 'JUEZ 3', 'n° jueces'];
+    const headerRow = ['TURNO', 'GIMNASTA', 'FECHA DE NACIMIENTO', equipoAgrupacion === 'federacion' ? 'FEDERACIÓN' : 'INSTITUCIÓN', 'CATEGORÍA', 'NIVEL', 'JUEZ 1', 'JUEZ 2', 'JUEZ 3', 'n° jueces'];
     if (showNotaD) {
       headerRow.push('NOTA D', 'NOTA B');
     } else {
@@ -234,7 +235,7 @@ export const exportTournamentToExcel = (tournament, sortBy = 'grupo') => {
   });
 
   // 2. Ranking General (Todos los aparatos y la sumatoria)
-  const rankingHeaders = ['TURNO', 'GIMNASTA', 'INSTITUCIÓN', 'CATEGORÍA', 'NIVEL', 'AÑO'];
+  const rankingHeaders = ['TURNO', 'GIMNASTA', equipoAgrupacion === 'federacion' ? 'FEDERACIÓN' : 'INSTITUCIÓN', 'CATEGORÍA', 'NIVEL', 'AÑO'];
   aparatos.forEach(ap => rankingHeaders.push(ap.toUpperCase()));
   rankingHeaders.push('TOTAL', 'PUESTO');
 
@@ -255,7 +256,10 @@ export const exportTournamentToExcel = (tournament, sortBy = 'grupo') => {
     aparatos.forEach(ap => {
       if (is1BGroup) {
         const name = ap.toLowerCase();
-        if (!name.includes('salto') && !name.includes('suelo')) return;
+        if (!name.includes('salto') && !name.includes('suelo')) {
+          scores[ap] = null;
+          return;
+        }
       }
       const note = g.notas && g.notas[ap]?.final;
       if (note !== undefined && note !== null) {
@@ -305,7 +309,7 @@ export const exportTournamentToExcel = (tournament, sortBy = 'grupo') => {
       g.nacimiento
     ];
     aparatos.forEach(ap => {
-      row.push(g.scores[ap] !== null ? g.scores[ap] : '');
+      row.push(g.scores[ap] !== null && g.scores[ap] !== undefined ? g.scores[ap] : '');
     });
     row.push(g.totalScore > 0 ? g.totalScore : '');
     row.push(g.puesto);
@@ -342,7 +346,7 @@ export const exportTournamentToExcel = (tournament, sortBy = 'grupo') => {
   });
 
   const podiumRows = [
-    ['POSICIÓN', 'MEDALLA', 'GIMNASTA', 'INSTITUCIÓN', 'CATEGORÍA', 'NIVEL', 'AÑO', 'TOTAL']
+    ['POSICIÓN', 'MEDALLA', 'GIMNASTA', equipoAgrupacion === 'federacion' ? 'FEDERACIÓN' : 'INSTITUCIÓN', 'CATEGORÍA', 'NIVEL', 'AÑO', 'TOTAL']
   ];
 
   Object.keys(podiumGroups).sort().forEach(key => {
@@ -396,7 +400,6 @@ export const exportTournamentToExcel = (tournament, sortBy = 'grupo') => {
     return str.trim().toLowerCase().split(/\s+/).map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   };
 
-  const equipoAgrupacion = tournament?.configuracion?.equipoAgrupacion || 'institucion';
   // Agrupar gimnastas por Nivel, Categoría (completa, sin división por edad) y Club/Federacion
   const clubGroups = {};
   sortedGimnastas.forEach(g => {
@@ -508,7 +511,7 @@ export const exportTournamentToExcel = (tournament, sortBy = 'grupo') => {
       gymnastsInAp.sort((a, b) => parseFloat(b.notas[ap].final) - parseFloat(a.notas[ap].final));
       
       aparatoRankingRows.push([`${groupTitle.toUpperCase()} - ${ap.toUpperCase()}`]);
-      aparatoRankingRows.push(['POSICIÓN', 'MEDALLA', 'GIMNASTA', 'INSTITUCIÓN', 'NOTA B', 'DTOS', 'NOTA D', 'TOTAL APARATO']);
+      aparatoRankingRows.push(['POSICIÓN', 'MEDALLA', 'GIMNASTA', equipoAgrupacion === 'federacion' ? 'FEDERACIÓN' : 'INSTITUCIÓN', 'NOTA B', 'DTOS', 'NOTA D', 'TOTAL APARATO']);
       
       let rank = 1;
       for (let idx = 0; idx < gymnastsInAp.length; idx++) {
