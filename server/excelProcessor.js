@@ -119,11 +119,11 @@ export const importGimnastasFromExcel = (buffer, filename = '') => {
       nombre: String(row[colIdx.nombre]).trim(),
       fechaNacimiento: fechaFormateada,
       nacimiento: año,
-      institucion: colIdx.institucion !== -1 && row[colIdx.institucion] ? String(row[colIdx.institucion]).trim() : 'Independiente',
+      institucion: colIdx.institucion !== -1 && row[colIdx.institucion] ? String(row[colIdx.institucion]).trim() : (colIdx.federacion !== -1 && row[colIdx.federacion] ? String(row[colIdx.federacion]).trim() : 'Independiente'),
       categoria: colIdx.categoria !== -1 && row[colIdx.categoria] ? String(row[colIdx.categoria]).trim() : 'Única',
       nivel: colIdx.nivel !== -1 && row[colIdx.nivel] ? String(row[colIdx.nivel]).trim() : 'Nivel 1',
       sexo: colIdx.sexo !== -1 && row[colIdx.sexo] ? String(row[colIdx.sexo]).trim().toUpperCase() : defaultSexo,
-      federacion: colIdx.federacion !== -1 && row[colIdx.federacion] ? String(row[colIdx.federacion]).trim() : '',
+      federacion: colIdx.federacion !== -1 && row[colIdx.federacion] ? String(row[colIdx.federacion]).trim() : (colIdx.institucion !== -1 && row[colIdx.institucion] ? String(row[colIdx.institucion]).trim() : ''),
       grupo: 'Turno 1', // Grupo/Turno inicial por defecto
       notas: {} // Inicialmente vacío
     };

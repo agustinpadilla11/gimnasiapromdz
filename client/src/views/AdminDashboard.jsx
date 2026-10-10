@@ -1183,7 +1183,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
               <thead>
                 <tr>
                   <th>Gimnasta</th>
-                  <th>Club / Institución</th>
+                  <th>{tournament?.configuracion?.equipoAgrupacion === 'federacion' ? 'Federación' : 'Club / Institución'}</th>
                   <th>Categoría</th>
                   <th>Nivel</th>
                   {monitorApparatus === 'Todos' ? (
@@ -1542,7 +1542,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                               <tr>
                                 <th style={{ width: '50px', textAlign: 'center', padding: '10px 6px' }}>Pos.</th>
                                 <th style={{ padding: '10px 8px' }}>Gimnasta</th>
-                                <th style={{ padding: '10px 8px' }}>Club / Institución</th>
+                                <th style={{ padding: '10px 8px' }}>{tournament?.configuracion?.equipoAgrupacion === 'federacion' ? 'Federación' : 'Club / Institución'}</th>
                                 {tournament.aparatos.map(ap => (
                                   <th key={ap} style={{ textAlign: 'center', fontSize: '0.75rem', padding: '10px 4px' }}>{ap.substring(0,3)}</th>
                                 ))}
