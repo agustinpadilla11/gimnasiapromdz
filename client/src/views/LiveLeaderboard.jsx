@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Trophy, Users, Award, ShieldAlert, Zap, Star, Maximize, Minimize } from 'lucide-react';
+import { Trophy, Users, Award, ShieldAlert, Zap, Star, Maximize, Minimize, X } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onChangeView }) {
@@ -19,6 +19,7 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
   
   // Modo de proyección y última calificación
   const [projectionMode, setProjectionMode] = useState(urlApparatus ? 'ultima' : 'carrusel');
+  const [teamScoreModal, setTeamScoreModal] = useState(null);
   const [lastProjected, setLastProjected] = useState(null); // { gymnast, aparato, score }
 
   // Estado para la revelación dramática de puntuaciones en vivo
@@ -237,18 +238,24 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
 
         tournament.aparatos.forEach(ap => {
           if (!categoryApparatuses.includes(ap)) {
-            scoresPorAparato[ap] = 0;
+            scoresPorAparato[ap] = { total: 0, details: [] };
             return;
           }
-          const notes = eligibleMembers
-            .map(m => m.scores ? m.scores[ap] : (m.notas?.[ap]?.final !== undefined ? parseFloat(m.notas[ap].final) : null))
-            .filter(n => n !== null && n !== undefined && !isNaN(n))
-            .sort((a, b) => b - a);
+          const notesInfo = eligibleMembers
+            .map(m => ({ 
+              gymnast: m, 
+              score: m.scores ? m.scores[ap] : (m.notas?.[ap]?.final !== undefined ? parseFloat(m.notas[ap].final) : null)
+            }))
+            .filter(n => n.score !== null && n.score !== undefined && !isNaN(n.score))
+            .sort((a, b) => b.score - a.score);
           
-          const bestScores = notes.slice(0, mejoresNotasEquipo);
-          const sum = bestScores.reduce((a, b) => a + b, 0);
-          scoresPorAparato[ap] = sum > 0 ? parseFloat(sum.toFixed(3)) : 0;
-          totalEquipo += scoresPorAparato[ap];
+          const bestScoresInfo = notesInfo.slice(0, mejoresNotasEquipo);
+          const sum = bestScoresInfo.reduce((a, b) => a + b.score, 0);
+          scoresPorAparato[ap] = {
+            total: sum > 0 ? parseFloat(sum.toFixed(3)) : 0,
+            details: bestScoresInfo
+          };
+          totalEquipo += scoresPorAparato[ap].total;
         });
       }
 
@@ -967,7 +974,18 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
                       <td style={{ fontWeight: '800', color: '#fff' }}>{club.clubName}</td>
                       {displayApparatuses.map(ap => (
                         <td key={ap} style={{ textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: '600' }}>
-                          {club.scoresPorAparato[ap] > 0 ? club.scoresPorAparato[ap].toFixed(3) : '-'}
+                          {club.scoresPorAparato[ap]?.total > 0 ? (
+                            <span 
+                              style={{ cursor: 'pointer', textDecoration: 'underline', color: 'var(--primary-color)' }}
+                              onClick={() => setTeamScoreModal({
+                                clubName: club.clubName,
+                                aparato: ap,
+                                details: club.scoresPorAparato[ap].details
+                              })}
+                            >
+                              {club.scoresPorAparato[ap].total.toFixed(3)}
+                            </span>
+                          ) : '-'}
                         </td>
                       ))}
                       <td style={{
@@ -1406,6 +1424,56 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
           50% { opacity: 0.3; transform: scale(1.4); }
         }
       `}</style>
+
+      {teamScoreModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center',
+          alignItems: 'center', zIndex: 10000, padding: '20px'
+        }} onClick={() => setTeamScoreModal(null)}>
+          <div className="glass-panel" style={{
+            width: '100%', maxWidth: '400px', padding: '30px',
+            background: 'var(--bg-secondary)', border: '1px solid var(--border-color-hover)'
+          }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ fontSize: '1.2rem' }}>Notas: {teamScoreModal.aparato.toUpperCase()}</h3>
+              <button onClick={() => setTeamScoreModal(null)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <h4 style={{ fontSize: '1.1rem', color: '#fff' }}>{teamScoreModal.clubName}</h4>
+              <p style={{ color: 'var(--accent-primary)', fontSize: '0.85rem' }}>Las mejores {teamScoreModal.details.length} notas que conforman el total</p>
+            </div>
+
+            <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse', marginBottom: '20px' }}>
+              <thead>
+                <tr>
+                  <th style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '10px' }}>Gimnasta</th>
+                  <th style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '10px', textAlign: 'right' }}>Nota</th>
+                </tr>
+              </thead>
+              <tbody>
+                {teamScoreModal.details.map((d, i) => (
+                  <tr key={i}>
+                    <td style={{ padding: '8px 0', borderBottom: '1px solid var(--border-color)' }}>{d.gymnast.nombre}</td>
+                    <td style={{ padding: '8px 0', borderBottom: '1px solid var(--border-color)', textAlign: 'right', fontWeight: 'bold' }}>
+                      {d.score.toFixed(3)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div style={{ display: 'flex', gap: '12px', marginTop: '25px' }}>
+              <button onClick={() => setTeamScoreModal(null)} className="btn btn-primary" style={{ flex: 1 }}>
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
