@@ -745,10 +745,12 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
     // groupKey es la categoría completa (ej: "Nivel 1 A - Infantil")
     const members = groupedRankings[groupKey] || [];
 
+    const equipoAgrupacion = tournament?.configuracion?.equipoAgrupacion || 'institucion';
     const clubMembers = {};
     members.forEach(m => {
-      if (!clubMembers[m.institucion]) clubMembers[m.institucion] = [];
-      clubMembers[m.institucion].push(m);
+      const groupValue = equipoAgrupacion === 'federacion' ? (m.federacion || m.institucion) : m.institucion;
+      if (!clubMembers[groupValue]) clubMembers[groupValue] = [];
+      clubMembers[groupValue].push(m);
     });
 
     const clubResults = [];
@@ -1648,7 +1650,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                         <thead>
                           <tr>
                             <th style={{ width: '50px', textAlign: 'center', padding: '10px 6px' }}>Pos.</th>
-                            <th style={{ padding: '10px 8px' }}>Club / Institución</th>
+                            <th style={{ padding: '10px 8px' }}>{tournament?.configuracion?.equipoAgrupacion === 'federacion' ? 'Federación' : 'Club / Institución'}</th>
                             {tournament.aparatos.map(ap => (
                               <th key={ap} style={{ textAlign: 'center', fontSize: '0.75rem', padding: '10px 4px' }}>{ap.substring(0,3)}</th>
                             ))}

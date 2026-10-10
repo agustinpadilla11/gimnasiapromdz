@@ -209,10 +209,12 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
     // En equipos participan todas las gimnastas de la categoría completa (sin filtro por edad)
     const members = filteredGymnastsByTurno.filter(g => getBaseCategory(g) === baseCategory);
 
+    const equipoAgrupacion = tournament?.configuracion?.equipoAgrupacion || 'institucion';
     const clubMembers = {};
     members.forEach(m => {
-      if (!clubMembers[m.institucion]) clubMembers[m.institucion] = [];
-      clubMembers[m.institucion].push(m);
+      const groupValue = equipoAgrupacion === 'federacion' ? (m.federacion || m.institucion) : m.institucion;
+      if (!clubMembers[groupValue]) clubMembers[groupValue] = [];
+      clubMembers[groupValue].push(m);
     });
 
     const clubResults = [];
@@ -881,7 +883,7 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
                   <tr>
                     <th style={{ width: '80px', textAlign: 'center', fontSize: '1rem' }}>PUESTO</th>
                     <th style={{ fontSize: '1rem' }}>GIMNASTA</th>
-                    <th style={{ fontSize: '1rem' }}>CLUB / INSTITUCIÓN</th>
+                    <th style={{ fontSize: '1rem' }}>{tournament?.configuracion?.equipoAgrupacion === 'federacion' ? 'FEDERACIÓN' : 'CLUB / INSTITUCIÓN'}</th>
                     <th style={{ fontSize: '1rem', textAlign: 'center', width: '90px' }}>AÑO</th>
                     {displayApparatuses.map(ap => (
                       <th key={ap} style={{ textAlign: 'center', fontSize: '1rem' }}>{ap.toUpperCase()}</th>
@@ -940,7 +942,7 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
                 <thead>
                   <tr>
                     <th style={{ width: '80px', textAlign: 'center', fontSize: '1rem' }}>PUESTO</th>
-                    <th style={{ fontSize: '1rem' }}>CLUB / INSTITUCIÓN</th>
+                    <th style={{ fontSize: '1rem' }}>{tournament?.configuracion?.equipoAgrupacion === 'federacion' ? 'FEDERACIÓN' : 'CLUB / INSTITUCIÓN'}</th>
                     {displayApparatuses.map(ap => (
                       <th key={ap} style={{ textAlign: 'center', fontSize: '1rem' }}>{ap.toUpperCase()}</th>
                     ))}

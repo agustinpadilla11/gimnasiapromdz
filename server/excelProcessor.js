@@ -94,7 +94,8 @@ export const importGimnastasFromExcel = (buffer, filename = '') => {
     institucion: findIndex(['INSTITUCIÓN', 'INSTITUCION', 'CLUB', 'PROVINCIA', 'SELECCIÓN', 'SELECCION', 'ENTIDAD']),
     categoria: findIndex(['CATEGORÍA', 'CATEGORIA', 'CAT']),
     nivel: findIndex(['NIVEL', 'NIV', 'DIVISIÓN', 'DIVISION']),
-    sexo: findIndex(['SEXO', 'RAMA', 'GENERO', 'GÉNERO', 'MODALIDAD'])
+    sexo: findIndex(['SEXO', 'RAMA', 'GENERO', 'GÉNERO', 'MODALIDAD']),
+    federacion: findIndex(['FEDERACIÓN', 'FEDERACION', 'FED'])
   };
 
   // Validaciones mínimas
@@ -122,6 +123,7 @@ export const importGimnastasFromExcel = (buffer, filename = '') => {
       categoria: colIdx.categoria !== -1 && row[colIdx.categoria] ? String(row[colIdx.categoria]).trim() : 'Única',
       nivel: colIdx.nivel !== -1 && row[colIdx.nivel] ? String(row[colIdx.nivel]).trim() : 'Nivel 1',
       sexo: colIdx.sexo !== -1 && row[colIdx.sexo] ? String(row[colIdx.sexo]).trim().toUpperCase() : defaultSexo,
+      federacion: colIdx.federacion !== -1 && row[colIdx.federacion] ? String(row[colIdx.federacion]).trim() : '',
       grupo: 'Turno 1', // Grupo/Turno inicial por defecto
       notas: {} // Inicialmente vacío
     };
@@ -394,19 +396,21 @@ export const exportTournamentToExcel = (tournament, sortBy = 'grupo') => {
     return str.trim().toLowerCase().split(/\s+/).map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   };
 
-  // Agrupar gimnastas por Nivel, Categoría (completa, sin división por edad) y Club
+  const equipoAgrupacion = tournament?.configuracion?.equipoAgrupacion || 'institucion';
+  // Agrupar gimnastas por Nivel, Categoría (completa, sin división por edad) y Club/Federacion
   const clubGroups = {};
   sortedGimnastas.forEach(g => {
     const nivelFmt = formatStr(g.nivel);
     const catFmt = formatStr(g.categoria);
     const key = `${nivelFmt}_${catFmt}`;
+    const groupValue = equipoAgrupacion === 'federacion' ? (g.federacion || g.institucion) : g.institucion;
     if (!clubGroups[key]) clubGroups[key] = {};
-    if (!clubGroups[key][g.institucion]) clubGroups[key][g.institucion] = [];
-    clubGroups[key][g.institucion].push(g);
+    if (!clubGroups[key][groupValue]) clubGroups[key][groupValue] = [];
+    clubGroups[key][groupValue].push(g);
   });
 
   const teamRows = [
-    ['NIVEL', 'CATEGORÍA', 'CLUB / INSTITUCIÓN']
+    ['NIVEL', 'CATEGORÍA', equipoAgrupacion === 'federacion' ? 'FEDERACIÓN' : 'CLUB / INSTITUCIÓN']
   ];
   aparatos.forEach(ap => teamRows[0].push(ap.toUpperCase()));
   teamRows[0].push(`TOTAL EQUIPO (MEJORES ${mejoresNotasEquipo})`, 'PUESTO');

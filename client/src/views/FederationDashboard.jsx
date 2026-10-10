@@ -7,7 +7,7 @@ export default function FederationDashboard({ apiBase, auth, onLoginSuccess, onL
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Formulario de creación
+  // Formulario de creaciÃ³n
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newId, setNewId] = useState('');
   const [newNombre, setNewNombre] = useState('');
@@ -21,7 +21,7 @@ export default function FederationDashboard({ apiBase, auth, onLoginSuccess, onL
   const [newPremios, setNewPremios] = useState({ equipos: true, aparatos: true, allAround: true });
   const [newEquipoMinGimnastas, setNewEquipoMinGimnastas] = useState(3);
   const [newEquipoMaxGimnastas, setNewEquipoMaxGimnastas] = useState(12);
-  const [newEquipoMejoresNotas, setNewEquipoMejoresNotas] = useState(3);
+  const [newEquipoMejoresNotas, setNewEquipoMejoresNotas] = useState(5); const [newEquipoAgrupacion, setNewEquipoAgrupacion] = useState('federacion');
 
   const fetchTournaments = async () => {
     try {
@@ -37,7 +37,7 @@ export default function FederationDashboard({ apiBase, auth, onLoginSuccess, onL
         setError('No se pudo cargar la lista de torneos.');
       }
     } catch (err) {
-      setError('Error de conexión al cargar torneos.');
+      setError('Error de conexiÃ³n al cargar torneos.');
     }
   };
 
@@ -78,14 +78,15 @@ export default function FederationDashboard({ apiBase, auth, onLoginSuccess, onL
             premios: newPremios,
             equipoMinGimnastas: Number(newEquipoMinGimnastas) || 3,
             equipoMaxGimnastas: Number(newEquipoMaxGimnastas) || 12,
-            equipoMejoresNotas: Number(newEquipoMejoresNotas) || 3
+            equipoMejoresNotas: Number(newEquipoMejoresNotas) || 5,
+            equipoAgrupacion: newEquipoAgrupacion
           }
         })
       });
 
       const data = await res.json();
       if (res.ok) {
-        setSuccess(`¡Torneo "${newNombre}" creado con éxito!`);
+        setSuccess(`Â¡Torneo "${newNombre}" creado con Ã©xito!`);
         setShowCreateForm(false);
         setNewId('');
         setNewNombre('');
@@ -96,14 +97,14 @@ export default function FederationDashboard({ apiBase, auth, onLoginSuccess, onL
         setError(data.error || 'No se pudo crear el torneo.');
       }
     } catch (err) {
-      setError('Error de conexión al crear torneo.');
+      setError('Error de conexiÃ³n al crear torneo.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleDeleteTournament = async (tournamentId, name) => {
-    if (!window.confirm(`¿Estás seguro de que deseas eliminar el torneo "${name}"? Esta acción no se puede deshacer y borrará a todas las gimnastas y calificaciones.`)) {
+    if (!window.confirm(`Â¿EstÃ¡s seguro de que deseas eliminar el torneo "${name}"? Esta acciÃ³n no se puede deshacer y borrarÃ¡ a todas las gimnastas y calificaciones.`)) {
       return;
     }
 
@@ -127,7 +128,7 @@ export default function FederationDashboard({ apiBase, auth, onLoginSuccess, onL
         setError(data.error || 'No se pudo eliminar el torneo.');
       }
     } catch (err) {
-      setError('Error de conexión al eliminar el torneo.');
+      setError('Error de conexiÃ³n al eliminar el torneo.');
     } finally {
       setLoading(false);
     }
@@ -161,7 +162,7 @@ export default function FederationDashboard({ apiBase, auth, onLoginSuccess, onL
         background: 'var(--bg-card)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <img src="/logo.png" alt="Federación Logo" style={{ height: '50px', objectFit: 'contain' }} />
+          <img src="/logo.png" alt="FederaciÃ³n Logo" style={{ height: '50px', objectFit: 'contain' }} />
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
               <span style={{
@@ -177,12 +178,12 @@ export default function FederationDashboard({ apiBase, auth, onLoginSuccess, onL
                 gap: '4px'
               }}>
                 <ShieldCheck size={12} />
-                PANEL DE FEDERACIÓN
+                PANEL DE FEDERACIÃ“N
               </span>
-              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>•</span>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>â€¢</span>
               <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{auth.name} ({auth.federativeRole})</span>
             </div>
-            <h1 style={{ fontSize: '1.5rem', color: '#fff' }}>Gestión de Torneos y Eventos</h1>
+            <h1 style={{ fontSize: '1.5rem', color: '#fff' }}>GestiÃ³n de Torneos y Eventos</h1>
           </div>
         </div>
 
@@ -197,7 +198,7 @@ export default function FederationDashboard({ apiBase, auth, onLoginSuccess, onL
           </button>
           <button onClick={onLogout} className="btn btn-secondary" style={{ gap: '6px' }}>
             <LogOut size={16} />
-            Cerrar Sesión
+            Cerrar SesiÃ³n
           </button>
         </div>
       </header>
@@ -300,7 +301,7 @@ export default function FederationDashboard({ apiBase, auth, onLoginSuccess, onL
             </div>
 
             <div className="form-group" style={{ marginBottom: 0, gridColumn: 'span 2' }}>
-              <label>Tipo de Cálculo (GAM/GAF)</label>
+              <label>Tipo de CÃ¡lculo (GAM/GAF)</label>
               <select
                 value={newTipoCalculo}
                 onChange={(e) => setNewTipoCalculo(e.target.value)}
@@ -333,10 +334,10 @@ export default function FederationDashboard({ apiBase, auth, onLoginSuccess, onL
 
             {newPremios.equipos && (
               <div className="form-group" style={{ marginBottom: 0, gridColumn: 'span 2', background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                <label style={{ fontSize: '0.9rem', color: 'var(--accent-purple)', fontWeight: 600 }}>Configuración de Equipos</label>
+                <label style={{ fontSize: '0.9rem', color: 'var(--accent-purple)', fontWeight: 600 }}>ConfiguraciÃ³n de Equipos</label>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginTop: '8px' }}>
                   <div>
-                    <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Mínimo de gimnastas</label>
+                    <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>MÃ­nimo de gimnastas</label>
                     <input 
                       type="number" 
                       min="1" 
@@ -348,7 +349,7 @@ export default function FederationDashboard({ apiBase, auth, onLoginSuccess, onL
                     />
                   </div>
                   <div>
-                    <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Máximo de gimnastas</label>
+                    <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>MÃ¡ximo de gimnastas</label>
                     <input 
                       type="number" 
                       min="1" 
@@ -370,6 +371,18 @@ export default function FederationDashboard({ apiBase, auth, onLoginSuccess, onL
                       className="input-field" 
                       style={{ marginTop: '4px' }}
                     />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Agrupar por</label>
+                    <select 
+                      value={newEquipoAgrupacion} 
+                      onChange={(e) => setNewEquipoAgrupacion(e.target.value)}
+                      className="input-field" 
+                      style={{ marginTop: '4px', cursor: 'pointer' }}
+                    >
+                      <option value="institucion">Institución / Club</option>
+                      <option value="federacion">Federación</option>
+                    </select>
                   </div>
                 </div>
               </div>
@@ -414,11 +427,11 @@ export default function FederationDashboard({ apiBase, auth, onLoginSuccess, onL
                 <h3 style={{ fontSize: '1.2rem', color: '#fff', marginBottom: '4px' }}>{t.nombre}</h3>
                 <div style={{ display: 'flex', gap: '15px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                   <span>ID: <strong style={{ color: 'var(--text-primary)' }}>{t.id}</strong></span>
-                  <span>•</span>
+                  <span>â€¢</span>
                   <span>Rama: <strong style={{ color: 'var(--accent-primary)' }}>{t.modalidad}</strong></span>
-                  <span>•</span>
-                  <span>PIN Cómputos: <strong style={{ color: 'var(--text-primary)' }}>{t.adminPin}</strong></span>
-                  <span>•</span>
+                  <span>â€¢</span>
+                  <span>PIN CÃ³mputos: <strong style={{ color: 'var(--text-primary)' }}>{t.adminPin}</strong></span>
+                  <span>â€¢</span>
                   <span>PIN Jueces: <strong style={{ color: 'var(--text-primary)' }}>{t.juezPin}</strong></span>
                 </div>
               </div>
@@ -429,7 +442,7 @@ export default function FederationDashboard({ apiBase, auth, onLoginSuccess, onL
                   className="btn btn-primary"
                   style={{ padding: '8px 16px', fontSize: '0.85rem', gap: '6px' }}
                 >
-                  Administrar Cómputos
+                  Administrar CÃ³mputos
                   <ArrowRight size={14} />
                 </button>
                 
@@ -438,7 +451,7 @@ export default function FederationDashboard({ apiBase, auth, onLoginSuccess, onL
                   className="btn btn-secondary"
                   style={{ padding: '8px 16px', fontSize: '0.85rem' }}
                 >
-                  Ver Proyección
+                  Ver ProyecciÃ³n
                 </button>
 
                 <button 
