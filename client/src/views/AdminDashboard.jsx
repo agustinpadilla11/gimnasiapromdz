@@ -311,6 +311,41 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
     }
   };
 
+  // --- ELIMINAR TURNO COMPLETO ---
+  const handleDeleteTurno = async (turnoName, count) => {
+    const cantTexto = count !== undefined ? ` a las ${count} gimnastas asociadas a este turno` : ' a todas las gimnastas asociadas';
+    if (!window.confirm(`¿Estás seguro de que deseas eliminar el turno "${turnoName}"?\n\nEsta acción eliminará permanentemente${cantTexto} y todas sus notas.`)) {
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch(`${apiBase}/tournaments/${auth.tournamentId}/turnos?turno=${encodeURIComponent(turnoName)}`, {
+        method: 'DELETE',
+        headers: { 
+          'x-admin-pin': auth.pin,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        showFlashNotification(`Turno "${turnoName}" eliminado con éxito (${data.deletedCount ?? count ?? 0} gimnastas eliminadas).`);
+        if (selectedTurno === turnoName) {
+          setSelectedTurno('Todos');
+        }
+        await fetchTournamentData();
+      } else {
+        setError(data.error || 'No se pudo eliminar el turno.');
+      }
+    } catch (e) {
+      setError('Error al comunicar con el servidor para eliminar el turno.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // --- AGREGAR O EDITAR GIMNASTA ---
   const handleOpenAddForm = () => {
     setEditingGymnast(null);
@@ -1094,19 +1129,45 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <span style={{ fontWeight: '700', fontSize: '0.95rem', color: isSelected ? 'var(--accent-primary)' : 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={t}>
+                  <span style={{ fontWeight: '700', fontSize: '0.95rem', color: isSelected ? 'var(--accent-primary)' : 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '120px' }} title={t}>
                     {t}
                   </span>
-                  <span style={{
-                    fontSize: '0.75rem',
-                    padding: '2px 6px',
-                    borderRadius: '4px',
-                    background: isSelected ? 'var(--bg-tr-hover)' : 'var(--bg-btn-secondary)',
-                    color: isSelected ? 'var(--accent-primary)' : 'var(--text-muted)',
-                    fontWeight: '600'
-                  }}>
-                    {summary.count} gimn.
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{
+                      fontSize: '0.75rem',
+                      padding: '2px 6px',
+                      borderRadius: '4px',
+                      background: isSelected ? 'var(--bg-tr-hover)' : 'var(--bg-btn-secondary)',
+                      color: isSelected ? 'var(--accent-primary)' : 'var(--text-muted)',
+                      fontWeight: '600'
+                    }}>
+                      {summary.count} gimn.
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteTurno(t, summary.count);
+                      }}
+                      title={`Eliminar ${t}`}
+                      style={{
+                        background: 'rgba(239, 68, 68, 0.15)',
+                        border: '1px solid rgba(239, 68, 68, 0.3)',
+                        borderRadius: '5px',
+                        padding: '3px 5px',
+                        cursor: 'pointer',
+                        color: 'var(--accent-danger, #ef4444)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.35)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)'}
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
                 </div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   <strong>Niveles:</strong> {summary.niveles || 'Ninguno'}
@@ -1875,7 +1936,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                 onClick={() => {
                   setShowTurnoModal(false);
                   setTurnoForm({ name: '', niveles: '' });
-                  setTurnoFile(null);
+                  setTurnoFiles([]);
                 }} 
                 style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
               >
@@ -1968,6 +2029,59 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                 </button>
               </div>
             </form>
+
+            {availableTurnos.length > 0 && (
+              <div style={{ marginTop: '24px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
+                <h4 style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Turnos cargados en el torneo ({availableTurnos.length})
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '180px', overflowY: 'auto' }}>
+                  {availableTurnos.map(t => {
+                    const summary = getTurnoSummary(t);
+                    return (
+                      <div key={t} style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '10px 14px',
+                        background: 'rgba(255,255,255,0.03)',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: '8px'
+                      }}>
+                        <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginRight: '10px' }}>
+                          <span style={{ fontWeight: '700', fontSize: '0.9rem', color: 'var(--text-primary)' }}>{t}</span>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: '8px' }}>
+                            ({summary.count} gimnastas · {summary.niveles || 'Sin niveles'})
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteTurno(t, summary.count)}
+                          className="btn"
+                          style={{
+                            padding: '5px 10px',
+                            fontSize: '0.75rem',
+                            gap: '5px',
+                            background: 'rgba(239, 68, 68, 0.15)',
+                            color: 'var(--accent-danger)',
+                            border: '1px solid rgba(239, 68, 68, 0.3)',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            flexShrink: 0
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.35)'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)'}
+                        >
+                          <Trash2 size={13} /> Eliminar
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -405,6 +405,58 @@ app.delete('/api/tournaments/:tournamentId/gymnasts/:gymnastId', requireAdmin, a
     release();
   }
 });
+
+// 9.1. Eliminar turno completo y todas sus gimnastas (Admin)
+const handleEliminarTurnoLogic = async (req, res, turnoTarget) => {
+  const { tournamentId } = req.params;
+  if (!turnoTarget) {
+    return res.status(400).json({ error: 'Se requiere el nombre del turno a eliminar' });
+  }
+
+  const decodedTurno = decodeURIComponent(turnoTarget);
+
+  const lock = getTournamentLock(tournamentId);
+  const release = await lock.acquire();
+  try {
+    const tData = await loadTournament(tournamentId);
+    const initialLength = (tData.gimnastas || []).length;
+
+    tData.gimnastas = (tData.gimnastas || []).filter(g => {
+      const gTurno = g.grupo || 'Turno 1';
+      return gTurno !== decodedTurno;
+    });
+
+    const deletedCount = initialLength - tData.gimnastas.length;
+
+    if (tData.turnosConfig && Array.isArray(tData.turnosConfig)) {
+      tData.turnosConfig = tData.turnosConfig.filter(rule => rule.nombre !== decodedTurno);
+    }
+
+    await saveTournamentData(tournamentId, tData);
+
+    broadcast(tournamentId, { type: 'TOURNAMENT_RELOADED', gimnastas: tData.gimnastas });
+
+    res.json({ 
+      success: true, 
+      deletedCount, 
+      message: `Turno "${decodedTurno}" eliminado con éxito (${deletedCount} gimnastas eliminadas).` 
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Error al eliminar el turno: ' + err.message });
+  } finally {
+    release();
+  }
+};
+
+app.delete('/api/tournaments/:tournamentId/turnos', requireAdmin, async (req, res) => {
+  const turnoTarget = req.query.turno || req.body?.turno;
+  await handleEliminarTurnoLogic(req, res, turnoTarget);
+});
+
+app.delete('/api/tournaments/:tournamentId/turnos/:turnoName', requireAdmin, async (req, res) => {
+  const turnoTarget = req.params.turnoName;
+  await handleEliminarTurnoLogic(req, res, turnoTarget);
+});
 // 10. Guardar o actualizar notas (Juez/Admin)
 app.post('/api/tournaments/:tournamentId/score', async (req, res) => {
   const { tournamentId } = req.params;
