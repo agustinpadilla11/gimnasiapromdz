@@ -703,14 +703,22 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
     tournament.aparatos.forEach(ap => {
       if (is1BGroup) {
         const name = ap.toLowerCase();
-        if (!name.includes('salto') && !name.includes('suelo')) return;
+        if (!name.includes('salto') && !name.includes('suelo')) {
+          scores[ap] = null;
+          return;
+        }
       }
       
       const note = g.notas?.[ap]?.final;
-      if (note !== undefined && note !== null) {
-        scores[ap] = parseFloat(note);
-        totalScore += parseFloat(note);
-        hasScores = true;
+      if (note !== undefined && note !== null && note !== '') {
+        const parsed = parseFloat(note);
+        if (!isNaN(parsed)) {
+          scores[ap] = parsed;
+          totalScore += parsed;
+          hasScores = true;
+        } else {
+          scores[ap] = null;
+        }
       } else {
         scores[ap] = null;
       }
@@ -801,7 +809,10 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
       tournament.aparatos.forEach(ap => {
         if (is1BGroup) {
           const name = ap.toLowerCase();
-          if (!name.includes('salto') && !name.includes('suelo')) return;
+          if (!name.includes('salto') && !name.includes('suelo')) {
+            scoresPorAparato[ap] = { total: 0, details: [] };
+            return;
+          }
         }
 
         const notesInfo = eligibleMembers
@@ -1632,7 +1643,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                                       <span>{gym.nombre}</span>
                                       {parseFloat(gym.descuentoAllAround) > 0 && (
                                         <span style={{ fontSize: '0.75rem', color: 'var(--accent-danger)', fontWeight: 'normal' }}>
-                                          Bruto: {(parseFloat(gym.totalScore) + parseFloat(gym.descuentoAllAround)).toFixed(3)}
+                                          Bruto: {((parseFloat(gym.totalScore) || 0) + (parseFloat(gym.descuentoAllAround) || 0)).toFixed(3)}
                                         </span>
                                       )}
                                     </div>
@@ -1640,7 +1651,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                                   <td style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', padding: '10px 8px' }}>{gym.institucion}</td>
                                   {tournament.aparatos.map(ap => (
                                     <td key={ap} style={{ textAlign: 'center', fontFamily: 'var(--font-mono)', fontSize: '0.85rem', padding: '10px 4px' }}>
-                                      {gym.scores[ap] !== null ? gym.scores[ap].toFixed(3) : '-'}
+                                      {gym.scores?.[ap] !== null && gym.scores?.[ap] !== undefined && !isNaN(gym.scores[ap]) ? Number(gym.scores[ap]).toFixed(3) : '-'}
                                     </td>
                                   ))}
                                   <td style={{ textAlign: 'center', padding: '10px 6px' }}>
@@ -1886,7 +1897,7 @@ export default function AdminDashboard({ apiBase, wsBase, auth, onLogout, onChan
                                         <td style={{ fontWeight: '600', padding: '6px', fontSize: '0.85rem' }}>{gym.nombre}</td>
                                         <td style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', padding: '6px' }}>{gym.institucion}</td>
                                         <td style={{ textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: '700', color: 'var(--accent-primary)', padding: '6px' }}>
-                                          {gym.scores[ap].toFixed(3)}
+                                          {gym.scores?.[ap] !== null && gym.scores?.[ap] !== undefined && !isNaN(gym.scores[ap]) ? Number(gym.scores[ap]).toFixed(3) : '-'}
                                         </td>
                                       </tr>
                                     ))}

@@ -918,7 +918,7 @@ export default function LiveLeaderboard({ apiBase, wsBase, auth, onLogout, onCha
                       <td style={{ textAlign: 'center', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>{gym.nacimiento || '-'}</td>
                       {displayApparatuses.map(ap => (
                         <td key={ap} style={{ textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: '600' }}>
-                          {gym.scores[ap] !== null ? gym.scores[ap].toFixed(3) : '-'}
+                          {gym.scores?.[ap] !== null && gym.scores?.[ap] !== undefined && !isNaN(gym.scores[ap]) ? Number(gym.scores[ap]).toFixed(3) : '-'}
                         </td>
                       ))}
                       <td style={{
