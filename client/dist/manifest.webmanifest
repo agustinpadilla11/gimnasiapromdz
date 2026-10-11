@@ -1,0 +1,1 @@
+{"name":"Gimnasia Pro MDZ","short_name":"GimnasiaPro","description":"Sistema de puntuación para torneos de gimnasia","start_url":"/","display":"standalone","background_color":"#080c16","theme_color":"#080c16","lang":"en","scope":"/","icons":[{"src":"pwa-192x192.png","sizes":"192x192","type":"image/png"},{"src":"pwa-512x512.png","sizes":"512x512","type":"image/png"}]}
